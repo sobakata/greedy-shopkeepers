@@ -26,6 +26,25 @@ Build only what's in the design doc. Do not build:
 - The draw pile is always accessed from the bottom for loot bonus draws
 - Hands are not hidden between players
 
+## Git & GitHub
+
+The project is tracked at https://github.com/sobakata/greedy-shopkeepers.
+
+After any significant change (new feature, rule update, balance tweak), commit and push:
+```
+git add -A
+git commit -m "short description"
+git push
+```
+
+Always use the GitHub noreply address to keep personal info out of public commit history:
+```
+git config user.email "sobakata@users.noreply.github.com"
+git config user.name "sobakata"
+```
+
+Never commit files containing API keys, passwords, or personal data. The `.gitignore` covers common patterns — add to it if needed.
+
 ## Prototype Priorities (in order)
 
 1. Solo mode — full core loop playable end-to-end

@@ -1,0 +1,14 @@
+# Secrets / credentials
+.env
+*.env.*
+secrets.*
+credentials.*
+*.key
+*.pem
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
