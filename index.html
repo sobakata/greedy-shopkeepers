@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Greedy Shopkeepers</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1a1a2e; color: #e0e0e0; font-family: system-ui, sans-serif; min-height: 100vh; }
+    #app { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+    h1 { text-align: center; margin-bottom: 20px; font-size: 28px; color: #ffd700; letter-spacing: 1px; }
+    h2 { margin-bottom: 10px; font-size: 18px; }
+    h3 { margin-bottom: 6px; font-size: 14px; color: #aaa; font-weight: normal; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 6px;
+      padding: 8px 16px; font-size: 13px; font-weight: bold; transition: opacity 0.1s;
+    }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+    button:not(:disabled):hover { opacity: 0.85; }
+    .btn-primary   { background: #1976d2; color: #fff; }
+    .btn-success   { background: #388e3c; color: #fff; }
+    .btn-warning   { background: #f57c00; color: #fff; }
+    .btn-danger    { background: #c62828; color: #fff; }
+    .btn-secondary { background: #424242; color: #fff; }
+    .btn-ghost     { background: transparent; border: 1px solid #555; color: #ccc; }
+
+    .section {
+      background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 14px;
+    }
+    .card-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+    .btn-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .info-bar {
+      background: #0f3460; border-radius: 8px; padding: 10px 16px;
+      margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+    }
+
+    /* ── Card ── */
+    .card {
+      display: inline-flex; flex-direction: column; align-items: center;
+      justify-content: space-between; width: 74px; height: 104px; border-radius: 8px;
+      padding: 5px 4px 4px; border: 3px solid #444; cursor: pointer;
+      user-select: none; position: relative; flex-shrink: 0; transition: transform 0.1s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card.selected { outline: 3px solid #fff; outline-offset: 3px; }
+    .card.assigned { opacity: 0.38; pointer-events: none; transform: none; }
+    .card .card-level { font-size: 19px; font-weight: 900; line-height: 1; align-self: flex-start; }
+    .card .card-emoji { font-size: 30px; }
+    .card .card-type  { font-size: 9px; text-align: center; line-height: 1.3; opacity: 0.85; }
+
+    .rarity-common   { background: #1b3a1b; border-color: #4caf50; color: #c8f0c8; }
+    .rarity-uncommon { background: #17283e; border-color: #42a5f5; color: #c0dcff; }
+    .rarity-rare     { background: #271838; border-color: #ab47bc; color: #e8c8ff; }
+    .rarity-epic     { background: #3c2210; border-color: #ff9800; color: #ffe0b2; }
+
+    /* ── Wave arena ── */
+    .wave-arena { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+    .pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .pile-dead {
+      width: 74px; height: 104px; border: 2px dashed #2a2a4a; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; color: #3a3a5a; font-size: 22px;
+    }
+    .pile-count { font-size: 11px; color: #666; }
+    .pile-btn   { font-size: 11px; padding: 4px 8px; margin-top: 2px; }
+
+    /* ── Setup ── */
+    .setup-screen { text-align: center; padding: 48px 20px; }
+    .setup-screen p { color: #888; margin-bottom: 8px; }
+    .player-count-row { display: flex; justify-content: center; gap: 14px; margin: 28px 0 20px; }
+    .player-count-row button { width: 64px; height: 64px; font-size: 28px; border-radius: 14px; }
+
+    /* ── Interstitial ── */
+    .interstitial { text-align: center; padding: 72px 20px; }
+    .interstitial h2 { font-size: 30px; margin-bottom: 12px; }
+    .interstitial p  { color: #888; margin-bottom: 36px; font-size: 16px; }
+
+    /* ── Stash ── */
+    .stash-hint {
+      background: #0a1e36; border-radius: 8px; padding: 10px 14px;
+      margin-bottom: 10px; font-size: 13px; line-height: 1.6; color: #aaa;
+    }
+    .stash-hint strong { color: #e0e0e0; }
+
+    /* ── Scoring ── */
+    .set-bucket {
+      background: #101828; border: 2px dashed #2a3a52; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 8px;
+    }
+    .set-bucket.valid { border-color: #388e3c; }
+    .set-bucket h4 { font-size: 13px; color: #aaa; margin-bottom: 6px; }
+
+    .set-type-btn {
+      text-align: left; padding: 9px 13px; font-size: 12px;
+      font-weight: normal; line-height: 1.4;
+    }
+    .set-type-btn .set-name  { font-weight: bold; font-size: 13px; display: block; }
+    .set-type-btn .set-desc  { color: #aaa; }
+    .set-type-btn:not(:disabled) { border: 1px solid #388e3c; background: #1a2e1a; color: #c8f0c8; }
+
+    /* ── Scoreboard ── */
+    .score-entry {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 8px; border-bottom: 1px solid #1e2e48; font-size: 18px;
+    }
+    .score-entry.winner { color: #ffd700; font-weight: bold; font-size: 20px; }
+    .score-breakdown { font-size: 12px; color: #888; }
+
+    /* ── Tags ── */
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .tag-common   { background: #4caf50; color: #000; }
+    .tag-uncommon { background: #42a5f5; color: #000; }
+    .tag-rare     { background: #ab47bc; color: #fff; }
+    .tag-epic     { background: #ff9800; color: #000; }
+
+    .combat-status { margin-top: 8px; font-size: 13px; }
+    .ok   { color: #66bb6a; }
+    .warn { color: #ef5350; }
+
+    .score-summary {
+      font-size: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline;
+    }
+    .score-total { font-size: 26px; font-weight: bold; color: #ffd700; }
+
+    .players-overview {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .player-pill {
+      background: #0a0a1e; border-radius: 8px; padding: 8px 12px;
+      border: 1px solid #1e2e48; min-width: 110px;
+    }
+    .player-pill.active { border-color: #ffd700; }
+    .player-pill .pill-name { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
+    .player-pill .pill-stats { font-size: 11px; color: #777; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+
+// ============================================================
+// CONFIG — all tunable values live here
+// ============================================================
+const CONFIG = {
+  HAND_SIZE: 10,
+  HAND_MAX_START: 15,
+  STASH_QUANTITY_MAX: 6,
+  STASH_QUALITY_COUNT: 2,
+  SCORING: {
+    MATCHING_RARITY_PER_CARD:  2,  // min 2 cards
+    MATCHING_LEVEL_PER_CARD:   2,  // min 2 cards
+    MATCHING_TYPE_PER_CARD:    2,  // min 2 cards
+    RARITY_RAINBOW:           10,  // 4 cards, one of each rarity
+    ITEM_TYPE_RAINBOW:        15,  // 5 cards, one of each item type
+    LEVEL_STRAIGHT_PER_CARD:   3,  // min 3 consecutive levels
+  },
+  WAVE_PILES: 8,
+  WAVE_BASE_MONSTERS_PER_PLAYER: 8,   // base monster count per player in wave 1
+  WAVE_SCALING_MONSTERS_PER_PLAYER: 4, // additional monsters per player per wave after wave 1
+};
+
+// ============================================================
+// CARD DATA
+// ============================================================
+const MONSTER_EMOJI = {
+  goblin: '👺', undead: '💀', beast: '🐺', elemental: '🌪️', duck: '🦆',
+};
+const ITEM_EMOJI = {
+  weapon: '⚔️', armor: '🛡️', consumable: '🧪', trinket: '💍', luxury: '💎',
+};
+const RARITY_LABEL = {
+  common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic',
+};
+const RARITY_TAG = {
+  common: 'tag-common', uncommon: 'tag-uncommon', rare: 'tag-rare', epic: 'tag-epic',
+};
+
+const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3 };
+
+// CARDS map: id -> card object (populated by buildDeck)
+let CARDS = {};
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildDeck() {
+  // Distributions from design doc
+  const rarities = [
+    ...Array(50).fill('common'),
+    ...Array(40).fill('uncommon'),
+    ...Array(30).fill('rare'),
+    ...Array(20).fill('epic'),
+  ];
+  const levels = [
+    ...Array(14).fill(1),  ...Array(16).fill(2),  ...Array(14).fill(3),
+    ...Array(16).fill(4),  ...Array(14).fill(5),  ...Array(16).fill(6),
+    ...Array(14).fill(7),  ...Array(16).fill(8),  ...Array(10).fill(9),
+    ...Array(10).fill(10),
+  ];
+  const monsterTypes = [
+    ...Array(30).fill('goblin'),    ...Array(30).fill('undead'),
+    ...Array(30).fill('beast'),     ...Array(30).fill('elemental'),
+    ...Array(20).fill('duck'),
+  ];
+  const itemTypes = [
+    ...Array(30).fill('weapon'),    ...Array(30).fill('armor'),
+    ...Array(30).fill('consumable'),...Array(30).fill('trinket'),
+    ...Array(20).fill('luxury'),
+  ];
+
+  // Shuffle each pool independently, then zip into cards
+  shuffle(rarities); shuffle(levels); shuffle(monsterTypes); shuffle(itemTypes);
+
+  const cards = {};
+  for (let i = 0; i < 140; i++) {
+    const id = 'c' + String(i + 1).padStart(3, '0');
+    cards[id] = {
+      id,
+      rarity:      rarities[i],
+      level:       levels[i],
+      monsterType: monsterTypes[i],
+      itemType:    itemTypes[i],
+    };
+  }
+  return cards;
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let G = null;
+
+function initGame(playerCount) {
+  CARDS = buildDeck();
+
+  // drawPile: index 0 = bottom (loot bonus), last index = top (deal/forfeit)
+  const drawPile = shuffle(Object.keys(CARDS));
+
+  const players = [];
+  for (let i = 0; i < playerCount; i++) {
+    players.push({ id: i, name: 'Player ' + (i + 1), hand: [], lootPile: [], stash: [] });
+  }
+
+  // Deal 10 cards to each player (from top of deck, round-robin)
+  for (let round = 0; round < CONFIG.HAND_SIZE; round++) {
+    for (const p of players) {
+      if (drawPile.length > 0) p.hand.push(drawPile.pop());
+    }
+  }
+
+  G = {
+    phase: 'wave',
+    waveIndex: 0,
+    currentPlayerIndex: Math.floor(Math.random() * playerCount),
+    players,
+    drawPile,
+    wavePiles: [],          // array of card-id arrays; last element = top (visible)
+    selectedCardIds: [],    // cards in hand selected for combat
+
+    // Stash phase
+    stashPlayerIndex: 0,
+    stashSelectedIds: [],
+
+    // Scoring phase
+    scoringPlayerIndex: 0,
+    scoringSets:    [],     // { type, cardIds, points }
+    scoringSelected: [],
+    scoringAssigned: {},    // cardId -> true
+    allPlayerSets:  {},     // playerIndex -> array of sets
+
+    // Interstitial
+    interstitialNext: null,
+
+    // Sorting
+    cardSort: [],   // active sort keys in priority order, e.g. ['rarity', 'level']
+  };
+
+  setupWave(0);
+  render();
+}
+
+function setupWave(waveIndex) {
+  const numPiles = CONFIG.WAVE_PILES;
+  const total    = CONFIG.WAVE_BASE_MONSTERS_PER_PLAYER * G.players.length
+                 + CONFIG.WAVE_SCALING_MONSTERS_PER_PLAYER * G.players.length * waveIndex;
+  const base   = Math.floor(total / numPiles);
+  const extras = total % numPiles;
+
+  G.wavePiles = [];
+  G.selectedCardIds = [];
+  for (let p = 0; p < numPiles; p++) {
+    const pileSize = base + (p < extras ? 1 : 0);
+    const pile = [];
+    for (let m = 0; m < pileSize; m++) {
+      if (G.drawPile.length > 0) pile.push(G.drawPile.pop());
+    }
+    G.wavePiles.push(pile);
+  }
+}
+
+// ============================================================
+// COMBAT LOGIC
+// ============================================================
+function canDefeat(cardIds, monsterCardId) {
+  if (cardIds.length === 0) return false;
+  const monster = CARDS[monsterCardId];
+  const items   = cardIds.map(id => CARDS[id]);
+  if (!items.every(c => c.rarity === items[0].rarity)) return false; // must be same rarity
+  return items.reduce((s, c) => s + c.level, 0) >= monster.level;
+}
+
+function defeatMonster(pileIndex) {
+  const pile   = G.wavePiles[pileIndex];
+  const player = G.players[G.currentPlayerIndex];
+  const played = G.selectedCardIds;
+
+  pile.pop(); // remove top monster
+
+  // Played cards go to loot pile (not discarded)
+  for (const id of played) {
+    const i = player.hand.indexOf(id);
+    if (i !== -1) player.hand.splice(i, 1);
+    player.lootPile.push(id);
+  }
+
+  // Loot bonus: 1 card from bottom of draw pile
+  if (G.drawPile.length > 0) {
+    player.lootPile.push(G.drawPile.shift());
+  }
+
+  G.selectedCardIds = [];
+
+  if (G.wavePiles.every(p => p.length === 0)) {
+    startStashPhase();
+  } else {
+    advanceTurn();
+  }
+}
+
+function forfeit() {
+  const player = G.players[G.currentPlayerIndex];
+  if (G.drawPile.length > 0) player.hand.push(G.drawPile.pop());
+  G.selectedCardIds = [];
+  advanceTurn();
+}
+
+function enterWavePhase() {
+  const player = G.players[G.currentPlayerIndex];
+  G.phase = player.hand.length > CONFIG.HAND_MAX_START ? 'discard' : 'wave';
+}
+
+function handleDiscardCard(cardId) {
+  if (!G || G.phase !== 'discard') return;
+  const player = G.players[G.currentPlayerIndex];
+  const i = player.hand.indexOf(cardId);
+  if (i !== -1) player.hand.splice(i, 1);
+  if (player.hand.length <= CONFIG.HAND_MAX_START) G.phase = 'wave';
+  render();
+}
+
+function advanceTurn() {
+  if (G.players.length === 1) return; // solo: same player continues
+  G.interstitialNext = 'wave-turn';
+  G.phase = 'interstitial';
+}
+
+// ============================================================
+// STASH PHASE
+// ============================================================
+function startStashPhase() {
+  G.phase = 'stash';
+  G.stashPlayerIndex = 0;
+  G.stashSelectedIds = [];
+}
+
+function confirmStash(type) {
+  const player   = G.players[G.stashPlayerIndex];
+  const selected = G.stashSelectedIds;
+
+  // Validate
+  if (type === 'quality') {
+    if (selected.length !== CONFIG.STASH_QUALITY_COUNT) return;
+  } else {
+    if (selected.length === 0) return;
+    if (selected.reduce((s, id) => s + CARDS[id].level, 0) > CONFIG.STASH_QUANTITY_MAX) return;
+  }
+
+  // Move selected to stash
+  for (const id of selected) {
+    const i = player.lootPile.indexOf(id);
+    if (i !== -1) player.lootPile.splice(i, 1);
+    player.stash.push(id);
+  }
+
+  // Remaining loot returns to hand
+  player.hand.push(...player.lootPile);
+  player.lootPile = [];
+
+  // Refill hand to HAND_SIZE
+  while (player.hand.length < CONFIG.HAND_SIZE && G.drawPile.length > 0) {
+    player.hand.push(G.drawPile.pop());
+  }
+
+  G.stashSelectedIds = [];
+
+  const hasMorePlayers = G.stashPlayerIndex < G.players.length - 1;
+  if (hasMorePlayers) {
+    G.stashPlayerIndex++;
+    G.interstitialNext = 'stash-next';
+    G.phase = 'interstitial';
+  } else {
+    // All players done stashing
+    if (G.waveIndex < 2) {
+      G.waveIndex++;
+      setupWave(G.waveIndex);
+      enterWavePhase();
+    } else {
+      startScoring();
+    }
+  }
+}
+
+// ============================================================
+// SCORING PHASE
+// ============================================================
+const SET_TYPES = [
+  { key: 'matching_rarity', label: 'Matching Rarity',   desc: 'Min 2 cards, same rarity' },
+  { key: 'matching_level',  label: 'Matching Level',    desc: 'Min 2 cards, same level' },
+  { key: 'matching_type',   label: 'Matching Item Type',desc: 'Min 2 cards, same item type' },
+  { key: 'rarity_rainbow',  label: 'Rarity Rainbow',    desc: 'Exactly 4 cards, one of each rarity' },
+  { key: 'item_type_rainbow',label:'Item Type Rainbow', desc: 'Exactly 5 cards, one of each item type' },
+  { key: 'level_straight',  label: 'Level Straight',    desc: 'Min 3 cards, consecutive levels' },
+];
+
+function validateSet(type, cardIds) {
+  if (!cardIds.length) return false;
+  const cards = cardIds.map(id => CARDS[id]);
+  switch (type) {
+    case 'matching_rarity':
+      return cards.length >= 2 && cards.every(c => c.rarity === cards[0].rarity);
+    case 'matching_level':
+      return cards.length >= 2 && cards.every(c => c.level === cards[0].level);
+    case 'matching_type':
+      return cards.length >= 2 && cards.every(c => c.itemType === cards[0].itemType);
+    case 'rarity_rainbow': {
+      if (cards.length !== 4) return false;
+      return new Set(cards.map(c => c.rarity)).size === 4;
+    }
+    case 'item_type_rainbow': {
+      if (cards.length !== 5) return false;
+      return new Set(cards.map(c => c.itemType)).size === 5;
+    }
+    case 'level_straight': {
+      if (cards.length < 3) return false;
+      const lvls = [...new Set(cards.map(c => c.level))].sort((a, b) => a - b);
+      if (lvls.length !== cards.length) return false; // duplicate levels
+      for (let i = 1; i < lvls.length; i++) {
+        if (lvls[i] !== lvls[i - 1] + 1) return false;
+      }
+      return true;
+    }
+    default: return false;
+  }
+}
+
+function scoreSet(type, cardIds) {
+  const n = cardIds.length;
+  const S = CONFIG.SCORING;
+  switch (type) {
+    case 'matching_rarity':   return n * S.MATCHING_RARITY_PER_CARD;
+    case 'matching_level':    return n * S.MATCHING_LEVEL_PER_CARD;
+    case 'matching_type':     return n * S.MATCHING_TYPE_PER_CARD;
+    case 'rarity_rainbow':    return S.RARITY_RAINBOW;
+    case 'item_type_rainbow': return S.ITEM_TYPE_RAINBOW;
+    case 'level_straight':    return n * S.LEVEL_STRAIGHT_PER_CARD;
+    default: return 0;
+  }
+}
+
+function startScoring() {
+  G.phase = 'scoring';
+  G.scoringPlayerIndex = 0;
+  G.scoringSets    = [];
+  G.scoringSelected = [];
+  G.scoringAssigned = {};
+}
+
+function assignSet(type) {
+  const eligible = G.scoringSelected.filter(id => !G.scoringAssigned[id]);
+  if (!validateSet(type, eligible)) return;
+  const pts = scoreSet(type, eligible);
+  G.scoringSets.push({ type, cardIds: [...eligible], points: pts });
+  for (const id of eligible) G.scoringAssigned[id] = true;
+  G.scoringSelected = [];
+}
+
+function removeSet(index) {
+  const set = G.scoringSets[index];
+  for (const id of set.cardIds) delete G.scoringAssigned[id];
+  G.scoringSets.splice(index, 1);
+}
+
+function lockInScore() {
+  G.allPlayerSets[G.scoringPlayerIndex] = [...G.scoringSets];
+
+  if (G.scoringPlayerIndex < G.players.length - 1) {
+    G.scoringPlayerIndex++;
+    G.scoringSets    = [];
+    G.scoringSelected = [];
+    G.scoringAssigned = {};
+    G.interstitialNext = 'scoring-next';
+    G.phase = 'interstitial';
+  } else {
+    G.phase = 'gameover';
+  }
+}
+
+function calcScore(playerIndex) {
+  const player = G.players[playerIndex];
+  const sets   = G.allPlayerSets[playerIndex] || [];
+  const base   = player.stash.reduce((s, id) => s + CARDS[id].level, 0);
+  const bonus  = sets.reduce((s, set) => s + set.points, 0);
+  return { base, bonus, total: base + bonus };
+}
+
+// ============================================================
+// RENDER HELPERS
+// ============================================================
+function cardHTML(id, face, extraClass = '') {
+  const c     = CARDS[id];
+  const emoji = face === 'monster' ? MONSTER_EMOJI[c.monsterType] : ITEM_EMOJI[c.itemType];
+  const type  = face === 'monster' ? c.monsterType : c.itemType;
+  return `<div class="card rarity-${c.rarity} ${extraClass}" data-id="${id}">
+    <span class="card-level">${c.level}</span>
+    <span class="card-emoji">${emoji}</span>
+    <span class="card-type">${type}</span>
+  </div>`;
+}
+
+// ============================================================
+// SORTING
+// ============================================================
+function sortedCards(cardIds) {
+  if (!G || G.cardSort.length === 0) return cardIds;
+  return [...cardIds].sort((a, b) => {
+    for (const key of G.cardSort) {
+      const ca = CARDS[a], cb = CARDS[b];
+      let diff = 0;
+      if (key === 'rarity') diff = RARITY_ORDER[ca.rarity] - RARITY_ORDER[cb.rarity];
+      else if (key === 'level') diff = ca.level - cb.level;
+      else if (key === 'type')  diff = ca.itemType.localeCompare(cb.itemType);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+}
+
+function toggleSort(key) {
+  const i = G.cardSort.indexOf(key);
+  if (i !== -1) G.cardSort.splice(i, 1);
+  else G.cardSort.push(key);
+  render();
+}
+
+function sortButtonsHTML() {
+  const btn = key => {
+    const i = G.cardSort.indexOf(key);
+    const badge  = i !== -1 ? ` ${'①②③'[i]}` : '';
+    const active = i !== -1 ? ' style="background:#444;color:#fff"' : '';
+    const label  = key.charAt(0).toUpperCase() + key.slice(1);
+    return `<button class="btn-ghost" onclick="toggleSort('${key}')"${active}>By ${label}${badge}</button>`;
+  };
+  return `<div class="btn-row" style="margin-bottom:8px">
+    <span style="color:#888;font-size:13px;align-self:center">Sort:</span>
+    ${btn('rarity')}${btn('level')}${btn('type')}
+  </div>`;
+}
+
+// ============================================================
+// RENDER FUNCTIONS
+// ============================================================
+function render() {
+  const app = document.getElementById('app');
+  switch (G.phase) {
+    case 'wave':         app.innerHTML = renderWave();         break;
+    case 'discard':      app.innerHTML = renderDiscard();      break;
+    case 'stash':        app.innerHTML = renderStash();        break;
+    case 'scoring':      app.innerHTML = renderScoring();      break;
+    case 'gameover':     app.innerHTML = renderGameover();     break;
+    case 'interstitial': app.innerHTML = renderInterstitial(); break;
+  }
+}
+
+function renderWave() {
+  const player = G.players[G.currentPlayerIndex];
+  const waveNum = G.waveIndex + 1;
+  const sel = G.selectedCardIds;
+
+  // Combat status line
+  let combatStatus = '';
+  if (sel.length > 0) {
+    const items = sel.map(id => CARDS[id]);
+    const raritySet = new Set(items.map(c => c.rarity));
+    const sum = items.reduce((s, c) => s + c.level, 0);
+    if (raritySet.size > 1) {
+      combatStatus = `<div class="combat-status warn">⚠ Mixed rarities — cards must share a rarity to combine</div>`;
+    } else {
+      const r = [...raritySet][0];
+      combatStatus = `<div class="combat-status ok">✓ ${sum} total level (${RARITY_LABEL[r]}) — select a pile to fight</div>`;
+    }
+  }
+
+  // Wave piles
+  let pilesHTML = '';
+  G.wavePiles.forEach((pile, pi) => {
+    if (pile.length === 0) {
+      pilesHTML += `<div class="pile"><div class="pile-dead">✓</div><div class="pile-count">cleared</div></div>`;
+      return;
+    }
+    const topId  = pile[pile.length - 1];
+    const canFight = sel.length > 0 && canDefeat(sel, topId);
+    const btnDisabled = sel.length === 0 || !canFight ? 'disabled' : '';
+    pilesHTML += `<div class="pile">
+      ${cardHTML(topId, 'monster')}
+      <div class="pile-count">${pile.length} in pile</div>
+      <button class="btn-primary pile-btn" onclick="handleDefeat(${pi})" ${btnDisabled}>
+        Fight${canFight ? ' ✓' : ''}
+      </button>
+    </div>`;
+  });
+
+  // Player's hand
+  const handHTML = sortedCards(player.hand).map(id => {
+    const isSel = sel.includes(id);
+    return cardHTML(id, 'item', isSel ? 'selected' : '');
+  }).join('') || '<em style="color:#444">No cards</em>';
+
+  // Loot pile (embargoed)
+  const lootSection = player.lootPile.length > 0 ? `
+    <div class="section">
+      <h3>📦 Loot Pile — embargoed this wave (${player.lootPile.length} cards)</h3>
+      <div class="card-row">${player.lootPile.map(id => cardHTML(id, 'item', 'assigned')).join('')}</div>
+    </div>` : '';
+
+  // Players overview (multiplayer only)
+  const overviewSection = G.players.length > 1 ? `
+    <div class="section">
+      <h3>Players</h3>
+      <div class="players-overview">
+        ${G.players.map(p => `
+          <div class="player-pill ${p.id === G.currentPlayerIndex ? 'active' : ''}">
+            <div class="pill-name">${p.id === G.currentPlayerIndex ? '▶ ' : ''}${p.name}</div>
+            <div class="pill-stats">Hand: ${p.hand.length} · Loot: ${p.lootPile.length} · Stash: ${p.stash.length}</div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  return `
+    <h1>⚔️ Greedy Shopkeepers</h1>
+    <div class="info-bar">
+      <strong>Wave ${waveNum} / 3</strong>
+      <span>Turn: <strong>${player.name}</strong></span>
+      <span style="color:#888">Draw pile: ${G.drawPile.length}</span>
+    </div>
+
+    <div class="section">
+      <h2>🏟️ Wave ${waveNum} Arena</h2>
+      <div class="wave-arena">${pilesHTML}</div>
+    </div>
+
+    <div class="section">
+      <h2>🃏 ${player.name}'s Hand (${player.hand.length})</h2>
+      ${sortButtonsHTML()}
+      <div class="card-row">${handHTML}</div>
+      ${combatStatus}
+      <div class="btn-row">
+        <button class="btn-ghost" onclick="handleClearSel()">Clear selection</button>
+        <button class="btn-secondary" onclick="handleForfeit()">Forfeit — draw 1 card</button>
+      </div>
+    </div>
+
+    ${lootSection}
+    ${overviewSection}`;
+}
+
+function renderDiscard() {
+  const player = G.players[G.currentPlayerIndex];
+  const excess = player.hand.length - CONFIG.HAND_MAX_START;
+  const handHTML = player.hand.map(id => cardHTML(id, 'item')).join('');
+  return `
+    <h1>⚔️ Greedy Shopkeepers</h1>
+    <div class="info-bar">
+      <strong>Wave ${G.waveIndex + 1} / 3 — Starting Hand</strong>
+      <span>Turn: <strong>${player.name}</strong></span>
+    </div>
+    <div class="section">
+      <h2>🗑️ Discard down to ${CONFIG.HAND_MAX_START}</h2>
+      <p style="color:#e09030;margin-bottom:12px">
+        You have <strong>${player.hand.length}</strong> cards — discard <strong>${excess}</strong> more to begin your turn.
+        Click a card to discard it.
+      </p>
+      <div class="card-row">${handHTML}</div>
+    </div>`;
+}
+
+function renderStash() {
+  const player   = G.players[G.stashPlayerIndex];
+  const sel      = G.stashSelectedIds;
+  const levelSum = sel.reduce((s, id) => s + CARDS[id].level, 0);
+  const qualOk   = sel.length === CONFIG.STASH_QUALITY_COUNT;
+  const qtyOk    = sel.length > 0 && levelSum <= CONFIG.STASH_QUANTITY_MAX;
+
+  const lootHTML = sortedCards(player.lootPile).map(id =>
+    cardHTML(id, 'item', sel.includes(id) ? 'selected' : '')
+  ).join('') || '<em style="color:#444">Loot pile is empty</em>';
+
+  const selInfo = sel.length > 0
+    ? `Selected: ${sel.length} card${sel.length > 1 ? 's' : ''}, level sum <strong>${levelSum}</strong>`
+    : 'Click cards to select them';
+
+  const currentStashSection = player.stash.length > 0 ? `
+    <div class="section">
+      <h3>🏦 ${player.name}'s Current Stash (${player.stash.length} cards)</h3>
+      <div class="card-row">${player.stash.map(id => cardHTML(id, 'item', 'assigned')).join('')}</div>
+    </div>` : '';
+
+  return `
+    <h1>⚔️ Greedy Shopkeepers</h1>
+    <div class="info-bar">
+      <strong>Wave ${G.waveIndex + 1} — Stash Phase</strong>
+      <span><strong>${player.name}</strong> is stashing</span>
+    </div>
+
+    <div class="section">
+      <h2>📦 ${player.name}'s Loot Pile (${player.lootPile.length} cards)</h2>
+      <div class="stash-hint">
+        <strong>Quality Stash:</strong> pick exactly ${CONFIG.STASH_QUALITY_COUNT} cards (any level). &nbsp;
+        <strong>Quantity Stash:</strong> pick any cards with combined level ≤ ${CONFIG.STASH_QUANTITY_MAX}.<br>
+        Stashed cards score in the Final Scoring phase. Remaining loot returns to your hand.
+      </div>
+      ${sortButtonsHTML()}
+      <div class="card-row">${lootHTML}</div>
+      <div style="margin-top:10px;font-size:13px;color:#aaa">${selInfo}</div>
+      <div class="btn-row">
+        <button class="btn-success" onclick="handleStash('quality')" ${qualOk ? '' : 'disabled'}>
+          Quality Stash (exactly ${CONFIG.STASH_QUALITY_COUNT}) ${qualOk ? '✓' : ''}
+        </button>
+        <button class="btn-primary" onclick="handleStash('quantity')" ${qtyOk ? '' : 'disabled'}>
+          Quantity Stash (sum ≤ ${CONFIG.STASH_QUANTITY_MAX}) ${qtyOk ? '✓ sum=' + levelSum : levelSum > CONFIG.STASH_QUANTITY_MAX ? '✗ too high' : ''}
+        </button>
+        <button class="btn-ghost" onclick="handleClearStashSel()">Clear</button>
+      </div>
+    </div>
+
+    ${currentStashSection}`;
+}
+
+function renderScoring() {
+  const player = G.players[G.scoringPlayerIndex];
+  const sel    = G.scoringSelected;
+  const asgn   = G.scoringAssigned;
+
+  const baseScore = player.stash.reduce((s, id) => s + CARDS[id].level, 0);
+  const setScore  = G.scoringSets.reduce((s, set) => s + set.points, 0);
+  const total     = baseScore + setScore;
+
+  const stashHTML = player.stash.length > 0
+    ? player.stash.map(id => {
+        if (asgn[id]) return cardHTML(id, 'item', 'assigned');
+        return cardHTML(id, 'item', sel.includes(id) ? 'selected' : '');
+      }).join('')
+    : '<em style="color:#444">No stashed cards</em>';
+
+  // Eligible (selected and unassigned) for set assignment
+  const eligible = sel.filter(id => !asgn[id]);
+
+  const setButtons = SET_TYPES.map(st => {
+    const valid = validateSet(st.key, eligible);
+    const pts   = valid ? scoreSet(st.key, eligible) : 0;
+    return `<button class="btn-secondary set-type-btn" onclick="handleAssignSet('${st.key}')" ${valid ? '' : 'disabled'}>
+      <span class="set-name">${st.label}${valid ? ' +' + pts + ' pts' : ''}</span>
+      <span class="set-desc">${st.desc}</span>
+    </button>`;
+  }).join('');
+
+  const committedHTML = G.scoringSets.map((s, i) => {
+    const label = SET_TYPES.find(st => st.key === s.type)?.label || s.type;
+    const cards = s.cardIds.map(id => cardHTML(id, 'item', 'assigned')).join('');
+    return `<div class="set-bucket valid">
+      <h4>${label} — <strong>${s.points} pts</strong>
+        <button onclick="handleRemoveSet(${i})" style="font-size:10px;padding:2px 8px;margin-left:10px;" class="btn-danger">Remove</button>
+      </h4>
+      <div class="card-row">${cards}</div>
+    </div>`;
+  }).join('');
+
+  const setSection = eligible.length > 0 ? `
+    <div class="section">
+      <h2>Assign to Set Type</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">${setButtons}</div>
+    </div>` : '';
+
+  const committedSection = G.scoringSets.length > 0 ? `
+    <div class="section">
+      <h2>Committed Sets</h2>
+      ${committedHTML}
+    </div>` : '';
+
+  return `
+    <h1>⚔️ Greedy Shopkeepers</h1>
+    <div class="info-bar">
+      <strong>Final Scoring</strong>
+      <span><strong>${player.name}</strong> building sets</span>
+      <span>Running total: <strong style="color:#ffd700">${total}</strong> pts</span>
+    </div>
+
+    <div class="section">
+      <h2>🏪 ${player.name}'s Stash (${player.stash.length} cards)</h2>
+      <div style="font-size:12px;color:#888;margin-bottom:8px;">
+        All stash cards count toward base score. Click to select, then assign to a set for bonus points.
+        Dimmed cards are already assigned.
+      </div>
+      <div class="card-row">${stashHTML}</div>
+      <div class="btn-row">
+        <button class="btn-ghost" onclick="handleClearScoringSel()">Clear selection</button>
+      </div>
+    </div>
+
+    ${setSection}
+    ${committedSection}
+
+    <div class="section">
+      <div class="score-summary">
+        Base score: <strong>${baseScore}</strong>
+        <span style="color:#666">+</span>
+        Set bonuses: <strong>${setScore}</strong>
+        <span style="color:#666">=</span>
+        <span class="score-total">${total} pts</span>
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn-success" onclick="handleLockIn()" style="font-size:15px;padding:10px 28px;">
+          Lock in — ${total} pts ✓
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderGameover() {
+  const scores = G.players
+    .map((p, i) => ({ name: p.name, ...calcScore(i) }))
+    .sort((a, b) => b.total - a.total);
+
+  const maxScore = scores[0].total;
+  const winners  = scores.filter(s => s.total === maxScore).map(s => s.name).join(' & ');
+
+  const rows = scores.map(s => `
+    <div class="score-entry ${s.total === maxScore ? 'winner' : ''}">
+      <span>${s.total === maxScore ? '🏆 ' : ''}${s.name}</span>
+      <div style="text-align:right">
+        <div>${s.total} pts</div>
+        <div class="score-breakdown">base ${s.base} + sets ${s.bonus}</div>
+      </div>
+    </div>`).join('');
+
+  const headline = G.players.length === 1
+    ? `Final score: <strong style="color:#ffd700">${maxScore} pts</strong>`
+    : `Winner${scores.filter(s => s.total === maxScore).length > 1 ? 's' : ''}: <strong style="color:#ffd700">${winners}</strong>`;
+
+  return `
+    <h1>⚔️ Greedy Shopkeepers</h1>
+    <div class="section">
+      <h2 style="text-align:center;font-size:22px;color:#ffd700;margin-bottom:18px;">🏆 Final Scores</h2>
+      ${rows}
+      <div style="text-align:center;margin-top:20px;font-size:18px">${headline}</div>
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn-primary" onclick="showSetup()" style="font-size:16px;padding:12px 36px;">Play Again</button>
+    </div>`;
+}
+
+function renderInterstitial() {
+  let title, subtitle, btnLabel, btnAction;
+
+  if (G.interstitialNext === 'wave-turn') {
+    const next = G.players[(G.currentPlayerIndex + 1) % G.players.length];
+    title    = `Pass to ${next.name}`;
+    subtitle = `Wave ${G.waveIndex + 1} continues`;
+    btnLabel = `I'm ${next.name} — start my turn`;
+    btnAction = 'handleNextTurn()';
+
+  } else if (G.interstitialNext === 'stash-next') {
+    const next = G.players[G.stashPlayerIndex];
+    title    = `Pass to ${next.name}`;
+    subtitle = `Wave ${G.waveIndex + 1} Stash Phase`;
+    btnLabel = `I'm ${next.name} — start stashing`;
+    btnAction = 'handleNextStash()';
+
+  } else if (G.interstitialNext === 'scoring-next') {
+    const next = G.players[G.scoringPlayerIndex];
+    title    = `Pass to ${next.name}`;
+    subtitle = 'Final Scoring Phase';
+    btnLabel = `I'm ${next.name} — build my sets`;
+    btnAction = 'handleNextScoring()';
+  }
+
+  return `
+    <div class="interstitial">
+      <h2>${title}</h2>
+      <p>${subtitle}</p>
+      <button class="btn-primary" onclick="${btnAction}" style="font-size:16px;padding:12px 32px;">${btnLabel}</button>
+    </div>`;
+}
+
+// ============================================================
+// SETUP SCREEN
+// ============================================================
+function showSetup() {
+  document.getElementById('app').innerHTML = `
+    <div class="setup-screen">
+      <h1>⚔️ Greedy Shopkeepers</h1>
+      <p>A board game prototype</p>
+      <p style="margin-top:4px;font-size:12px">Defeat monsters · Loot items · Build the best shop</p>
+      <h3 style="margin-top:36px;font-size:16px;color:#ccc">How many players?</h3>
+      <div class="player-count-row">
+        <button class="btn-primary" onclick="initGame(1)">1</button>
+        <button class="btn-primary" onclick="initGame(2)">2</button>
+        <button class="btn-primary" onclick="initGame(3)">3</button>
+        <button class="btn-primary" onclick="initGame(4)">4</button>
+      </div>
+      <p style="font-size:12px;color:#555">Start with solo (1 player) to learn the rules</p>
+    </div>`;
+}
+
+// ============================================================
+// EVENT DELEGATION — card clicks
+// ============================================================
+document.getElementById('app').addEventListener('click', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const id = card.dataset.id;
+  if (!id || !G) return;
+
+  if (G.phase === 'discard') {
+    handleDiscardCard(id);
+
+  } else if (G.phase === 'wave') {
+    const player = G.players[G.currentPlayerIndex];
+    if (!player.hand.includes(id)) return; // only hand cards are selectable
+    const i = G.selectedCardIds.indexOf(id);
+    if (i !== -1) G.selectedCardIds.splice(i, 1);
+    else G.selectedCardIds.push(id);
+    render();
+
+  } else if (G.phase === 'stash') {
+    const player = G.players[G.stashPlayerIndex];
+    if (!player.lootPile.includes(id)) return;
+    const i = G.stashSelectedIds.indexOf(id);
+    if (i !== -1) G.stashSelectedIds.splice(i, 1);
+    else G.stashSelectedIds.push(id);
+    render();
+
+  } else if (G.phase === 'scoring') {
+    const player = G.players[G.scoringPlayerIndex];
+    if (!player.stash.includes(id)) return;
+    if (G.scoringAssigned[id]) return;
+    const i = G.scoringSelected.indexOf(id);
+    if (i !== -1) G.scoringSelected.splice(i, 1);
+    else G.scoringSelected.push(id);
+    render();
+  }
+});
+
+// ============================================================
+// ACTION HANDLERS (called from onclick attributes)
+// ============================================================
+function handleDefeat(pileIndex) {
+  if (!G || G.phase !== 'wave') return;
+  const pile = G.wavePiles[pileIndex];
+  if (!pile || !pile.length) return;
+  if (!canDefeat(G.selectedCardIds, pile[pile.length - 1])) return;
+  defeatMonster(pileIndex);
+  render();
+}
+
+function handleForfeit() {
+  if (!G || G.phase !== 'wave') return;
+  forfeit();
+  render();
+}
+
+function handleClearSel() {
+  if (!G) return;
+  G.selectedCardIds = [];
+  render();
+}
+
+function handleStash(type) {
+  if (!G || G.phase !== 'stash') return;
+  confirmStash(type);
+  render();
+}
+
+function handleClearStashSel() {
+  if (!G) return;
+  G.stashSelectedIds = [];
+  render();
+}
+
+function handleAssignSet(type) {
+  if (!G || G.phase !== 'scoring') return;
+  assignSet(type);
+  render();
+}
+
+function handleRemoveSet(index) {
+  if (!G || G.phase !== 'scoring') return;
+  removeSet(index);
+  render();
+}
+
+function handleClearScoringSel() {
+  if (!G) return;
+  G.scoringSelected = [];
+  render();
+}
+
+function handleLockIn() {
+  if (!G || G.phase !== 'scoring') return;
+  lockInScore();
+  render();
+}
+
+function handleNextTurn() {
+  if (!G) return;
+  G.currentPlayerIndex = (G.currentPlayerIndex + 1) % G.players.length;
+  G.interstitialNext = null;
+  enterWavePhase();
+  render();
+}
+
+function handleNextStash() {
+  if (!G) return;
+  G.phase = 'stash';
+  G.interstitialNext = null;
+  render();
+}
+
+function handleNextScoring() {
+  if (!G) return;
+  G.phase = 'scoring';
+  G.interstitialNext = null;
+  render();
+}
+
+// ============================================================
+// BOOT
+// ============================================================
+showSetup();
+</script>
+</body>
+</html>
