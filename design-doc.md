@@ -230,15 +230,15 @@ Scoring uses **lookup tables** indexed by set size, so the physical game can inc
 
 **Matching sets** (same rarity / same level / same item type):
 
-| Cards in set | 2 | 3 | 4 | 5 | 6 | 7 |
-|---|---|---|---|---|---|---|
-| Points | 3 | 7 | 14 | 25 | 42 | 65 |
+| Cards in set | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|
+| Points | 3 | 7 | 14 | 25 | 42 | 65 | 95 | 133 | 180 |
 
 **Level Straight** (min 3 consecutive levels):
 
-| Cards in run | 3 | 4 | 5 | 6 | 7 |
-|---|---|---|---|---|---|
-| Points | 10 | 20 | 34 | 52 | 74 |
+| Cards in run | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|
+| Points | 10 | 20 | 34 | 52 | 74 | 100 | 130 | 164 |
 
 **Fixed bonuses:**
 | Set Type | Points |

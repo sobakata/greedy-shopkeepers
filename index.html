@@ -151,8 +151,8 @@ const CONFIG = {
   STASH_QUANTITY_MAX: 10,  // quantity stash: combined level total must not exceed this
   SCORING: {
     // Lookup tables indexed by set size (index 0 and 1 are unused/invalid)
-    MATCHING_SET_POINTS:  [0, 0, 3, 7, 14, 25, 42, 65],  // matching rarity / level / type
-    STRAIGHT_POINTS:      [0, 0, 0, 10, 20, 34, 52, 74],  // level straight (min 3)
+    MATCHING_SET_POINTS:  [0, 0, 3, 7, 14, 25, 42, 65, 95, 133, 180],  // matching rarity / level / type
+    STRAIGHT_POINTS:      [0, 0, 0, 10, 20, 34, 52, 74, 100, 130, 164],  // level straight (min 3)
     RARITY_RAINBOW:       15,   // exactly 4 cards, one of each rarity
     ITEM_TYPE_RAINBOW:    20,   // exactly 5 cards, one of each item type
   },
@@ -650,6 +650,21 @@ function sortButtonsHTML() {
   </div>`;
 }
 
+function scoringReferenceHTML() {
+  const S = CONFIG.SCORING;
+  const mpts = S.MATCHING_SET_POINTS;
+  const spts = S.STRAIGHT_POINTS;
+  const mRows = mpts.slice(2).map((pts, i) => `<span><strong>${i + 2}</strong>: ${pts}</span>`).join(' &nbsp;');
+  const sRows = spts.slice(3).map((pts, i) => `<span><strong>${i + 3}</strong>: ${pts}</span>`).join(' &nbsp;');
+  return `<div class="section" style="font-size:12px;color:#aaa">
+    <h3 style="margin-bottom:8px">📋 Scoring Reference</h3>
+    <div style="margin-bottom:6px"><strong style="color:#ccc">Matching Rarity / Level / Type</strong> (min 2 cards, same attribute) &nbsp;&nbsp; ${mRows}</div>
+    <div style="margin-bottom:6px"><strong style="color:#ccc">Level Straight</strong> (min 3 consecutive levels) &nbsp;&nbsp; ${sRows}</div>
+    <div><strong style="color:#ccc">Rarity Rainbow</strong> (one of each rarity, 4 cards): <strong>${S.RARITY_RAINBOW} pts</strong>
+    &nbsp;&nbsp;&nbsp; <strong style="color:#ccc">Item Type Rainbow</strong> (one of each type, 5 cards): <strong>${S.ITEM_TYPE_RAINBOW} pts</strong></div>
+  </div>`;
+}
+
 // ============================================================
 // RENDER FUNCTIONS
 // ============================================================
@@ -840,7 +855,7 @@ function renderScoring() {
   const total     = baseScore + setScore;
 
   const stashHTML = player.stash.length > 0
-    ? player.stash.map(id => {
+    ? sortedCards(player.stash).map(id => {
         if (asgn[id]) return cardHTML(id, 'item', 'assigned');
         return cardHTML(id, 'item', sel.includes(id) ? 'selected' : '');
       }).join('')
@@ -895,6 +910,7 @@ function renderScoring() {
         All stash cards count toward base score. Click to select, then assign to a set for bonus points.
         Dimmed cards are already assigned.
       </div>
+      ${sortButtonsHTML()}
       <div class="card-row">${stashHTML}</div>
       <div class="btn-row">
         <button class="btn-ghost" onclick="handleClearScoringSel()">Clear selection</button>
@@ -903,6 +919,7 @@ function renderScoring() {
 
     ${setSection}
     ${committedSection}
+    ${scoringReferenceHTML()}
 
     <div class="section">
       <div class="score-summary">
