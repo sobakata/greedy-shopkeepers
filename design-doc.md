@@ -97,11 +97,11 @@ Player dashboards with zones for: hand, loot pile, stash. (Player abilities area
 
 ## Game Structure
 
-A full game consists of **3 waves**, each with two phases:
+A full game consists of **5 waves**, each with two phases:
 
 > **Fight & Loot → Stash**
 
-After Wave 3's stash phase, the game moves to the **Final Scoring Phase**.
+After Wave 5's stash phase, the game moves to the **Final Scoring Phase**.
 
 ---
 
@@ -115,13 +115,17 @@ There are always **8 face-up piles**, giving players meaningful choice about whi
 
 Total monsters scale with player count and wave number:
 
-`total = (8 × players) + (4 × players × (wave − 1))`
+`total = (6 × players) + (1 × players × (wave − 1))`
 
 | Wave | Solo | 2 players | 4 players |
 |------|------|-----------|-----------|
-| 1 | 8 | 16 | 32 |
-| 2 | 12 | 24 | 48 |
-| 3 | 16 | 32 | 64 |
+| 1 | 6 | 12 | 24 |
+| 2 | 7 | 14 | 28 |
+| 3 | 8 | 16 | 32 |
+| 4 | 9 | 18 | 36 |
+| 5 | 10 | 20 | 40 |
+
+The formula is intentionally gentle — monster counts stay slightly below what a player can realistically fight, so forfeiting is possible but never forced.
 
 Monsters are distributed as evenly as possible across the 8 piles. When the total is not divisible by 8, the first N piles receive one extra monster.
 
@@ -167,12 +171,12 @@ The wave ends when **all monsters in all piles have been defeated**. There is no
 
 ## The Stash Phase
 
-Occurs after every wave (including after Wave 3, before Final Scoring).
+Occurs after every wave (including after Wave 5, before Final Scoring).
 
 Each player looks at their loot pile and chooses **one** of:
 
-- **Quality Stash:** Stash exactly **2 item cards** of any value, freely chosen.
-- **Quantity Stash:** Stash **any number of item cards** whose combined level total is **≤ 6**. (e.g., four level-1 cards + one level-2 card = 6 total.)
+- **Quality Stash:** Stash **1–5 item cards** of any level, freely chosen.
+- **Quantity Stash:** Stash **any number of item cards** whose combined level total is **≤ 10**. There is no card-count limit — this option intentionally supports low-level card farming strategies.
 
 A player must always stash — it's never beneficial to skip (all stashed cards count toward final scoring).
 
@@ -222,16 +226,27 @@ Multiple sets of the same type are allowed.
 
 **Placeholder scoring values (to be tuned during playtesting):**
 
+Scoring uses **lookup tables** indexed by set size, so the physical game can include a printed reference sheet. Committing more cards to a single set is increasingly rewarding.
+
+**Matching sets** (same rarity / same level / same item type):
+
+| Cards in set | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|---|
+| Points | 3 | 7 | 14 | 25 | 42 | 65 |
+
+**Level Straight** (min 3 consecutive levels):
+
+| Cards in run | 3 | 4 | 5 | 6 | 7 |
+|---|---|---|---|---|---|
+| Points | 10 | 20 | 34 | 52 | 74 |
+
+**Fixed bonuses:**
 | Set Type | Points |
 |----------|--------|
-| Matching Rarity (per card in set, min 2) | 2 pts/card |
-| Matching Level (per card in set, min 2) | 2 pts/card |
-| Matching Item Type (per card in set, min 2) | 2 pts/card |
-| Rarity Rainbow (full set of 4) | 10 pts |
-| Item Type Rainbow (full set of 5) | 15 pts |
-| Level Straight (per card in run, min 3) | 3 pts/card |
+| Rarity Rainbow (one of each rarity, 4 cards) | 15 pts |
+| Item Type Rainbow (one of each item type, 5 cards) | 20 pts |
 
-*These numbers are starting points. All scoring values should be easy to tweak in a single config object.*
+*All values are starting points for tuning. They live in a single CONFIG object in the code.*
 
 **Winner:** Player with the highest total score. Tie-breaking is undefined — treat as a shared win for the prototype.
 

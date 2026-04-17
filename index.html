@@ -144,21 +144,21 @@
 // CONFIG — all tunable values live here
 // ============================================================
 const CONFIG = {
+  WAVE_COUNT: 5,
   HAND_SIZE: 10,
   HAND_MAX_START: 15,
-  STASH_QUANTITY_MAX: 6,
-  STASH_QUALITY_COUNT: 2,
+  STASH_QUALITY_MAX: 5,    // quality stash: up to this many cards of any level
+  STASH_QUANTITY_MAX: 10,  // quantity stash: combined level total must not exceed this
   SCORING: {
-    MATCHING_RARITY_PER_CARD:  2,  // min 2 cards
-    MATCHING_LEVEL_PER_CARD:   2,  // min 2 cards
-    MATCHING_TYPE_PER_CARD:    2,  // min 2 cards
-    RARITY_RAINBOW:           10,  // 4 cards, one of each rarity
-    ITEM_TYPE_RAINBOW:        15,  // 5 cards, one of each item type
-    LEVEL_STRAIGHT_PER_CARD:   3,  // min 3 consecutive levels
+    // Lookup tables indexed by set size (index 0 and 1 are unused/invalid)
+    MATCHING_SET_POINTS:  [0, 0, 3, 7, 14, 25, 42, 65],  // matching rarity / level / type
+    STRAIGHT_POINTS:      [0, 0, 0, 10, 20, 34, 52, 74],  // level straight (min 3)
+    RARITY_RAINBOW:       15,   // exactly 4 cards, one of each rarity
+    ITEM_TYPE_RAINBOW:    20,   // exactly 5 cards, one of each item type
   },
   WAVE_PILES: 8,
-  WAVE_BASE_MONSTERS_PER_PLAYER: 8,   // base monster count per player in wave 1
-  WAVE_SCALING_MONSTERS_PER_PLAYER: 4, // additional monsters per player per wave after wave 1
+  WAVE_BASE_MONSTERS_PER_PLAYER: 6,    // monsters per player in wave 1
+  WAVE_SCALING_MONSTERS_PER_PLAYER: 1, // extra monsters per player per wave after wave 1
 };
 
 // ============================================================
@@ -386,7 +386,7 @@ function confirmStash(type) {
 
   // Validate
   if (type === 'quality') {
-    if (selected.length !== CONFIG.STASH_QUALITY_COUNT) return;
+    if (selected.length < 1 || selected.length > CONFIG.STASH_QUALITY_MAX) return;
   } else {
     if (selected.length === 0) return;
     if (selected.reduce((s, id) => s + CARDS[id].level, 0) > CONFIG.STASH_QUANTITY_MAX) return;
@@ -417,7 +417,7 @@ function confirmStash(type) {
     G.phase = 'interstitial';
   } else {
     // All players done stashing
-    if (G.waveIndex < 2) {
+    if (G.waveIndex < CONFIG.WAVE_COUNT - 1) {
       G.waveIndex++;
       setupWave(G.waveIndex);
       enterWavePhase();
@@ -473,13 +473,14 @@ function validateSet(type, cardIds) {
 function scoreSet(type, cardIds) {
   const n = cardIds.length;
   const S = CONFIG.SCORING;
+  const lookup = (table) => table[Math.min(n, table.length - 1)] || 0;
   switch (type) {
-    case 'matching_rarity':   return n * S.MATCHING_RARITY_PER_CARD;
-    case 'matching_level':    return n * S.MATCHING_LEVEL_PER_CARD;
-    case 'matching_type':     return n * S.MATCHING_TYPE_PER_CARD;
+    case 'matching_rarity':
+    case 'matching_level':
+    case 'matching_type':     return lookup(S.MATCHING_SET_POINTS);
     case 'rarity_rainbow':    return S.RARITY_RAINBOW;
     case 'item_type_rainbow': return S.ITEM_TYPE_RAINBOW;
-    case 'level_straight':    return n * S.LEVEL_STRAIGHT_PER_CARD;
+    case 'level_straight':    return lookup(S.STRAIGHT_POINTS);
     default: return 0;
   }
 }
@@ -520,6 +521,72 @@ function lockInScore() {
   } else {
     G.phase = 'gameover';
   }
+}
+
+function calcBestScore(playerIndex) {
+  const stash = G.players[playerIndex].stash;
+  const base  = stash.reduce((s, id) => s + CARDS[id].level, 0);
+  if (stash.length === 0) return { base, bonus: 0, total: base };
+
+  // Build group maps
+  const byRarity = {}, byLevel = {}, byType = {};
+  for (const id of stash) {
+    const c = CARDS[id];
+    (byRarity[c.rarity]   = byRarity[c.rarity]   || []).push(id);
+    (byLevel[c.level]     = byLevel[c.level]      || []).push(id);
+    (byType[c.itemType]   = byType[c.itemType]    || []).push(id);
+  }
+
+  const candidates = [];
+
+  // Matching sets
+  for (const ids of Object.values(byRarity)) if (ids.length >= 2) candidates.push({ type: 'matching_rarity', cardIds: ids });
+  for (const ids of Object.values(byLevel))  if (ids.length >= 2) candidates.push({ type: 'matching_level',  cardIds: ids });
+  for (const ids of Object.values(byType))   if (ids.length >= 2) candidates.push({ type: 'matching_type',   cardIds: ids });
+
+  // Level straights — all maximal consecutive runs ≥3, plus sub-runs
+  const levels = Object.keys(byLevel).map(Number).sort((a, b) => a - b);
+  let runStart = 0;
+  for (let i = 1; i <= levels.length; i++) {
+    if (i === levels.length || levels[i] !== levels[i - 1] + 1) {
+      const run = levels.slice(runStart, i);
+      if (run.length >= 3) {
+        for (let s = 0; s < run.length; s++) {
+          for (let e = s + 3; e <= run.length; e++) {
+            candidates.push({ type: 'level_straight', cardIds: run.slice(s, e).map(l => byLevel[l][0]) });
+          }
+        }
+      }
+      runStart = i;
+    }
+  }
+
+  // Rarity rainbow (one of each of 4 rarities)
+  const allRarities = ['common', 'uncommon', 'rare', 'epic'];
+  if (allRarities.every(r => byRarity[r])) {
+    candidates.push({ type: 'rarity_rainbow', cardIds: allRarities.map(r => byRarity[r][0]) });
+  }
+
+  // Item type rainbow (one of each of 5 types)
+  const allTypes = ['weapon', 'armor', 'consumable', 'trinket', 'luxury'];
+  if (allTypes.every(t => byType[t])) {
+    candidates.push({ type: 'item_type_rainbow', cardIds: allTypes.map(t => byType[t][0]) });
+  }
+
+  // Score and sort descending
+  for (const c of candidates) c.points = scoreSet(c.type, c.cardIds);
+  candidates.sort((a, b) => b.points - a.points);
+
+  // Greedy assignment — pick highest-scoring non-conflicting sets
+  const used = new Set();
+  let bonus = 0;
+  for (const cand of candidates) {
+    if (cand.cardIds.some(id => used.has(id))) continue;
+    bonus += cand.points;
+    for (const id of cand.cardIds) used.add(id);
+  }
+
+  return { base, bonus, total: base + bonus };
 }
 
 function calcScore(playerIndex) {
@@ -665,7 +732,7 @@ function renderWave() {
   return `
     <h1>⚔️ Greedy Shopkeepers</h1>
     <div class="info-bar">
-      <strong>Wave ${waveNum} / 3</strong>
+      <strong>Wave ${waveNum} / ${CONFIG.WAVE_COUNT}</strong>
       <span>Turn: <strong>${player.name}</strong></span>
       <span style="color:#888">Draw pile: ${G.drawPile.length}</span>
     </div>
@@ -693,11 +760,11 @@ function renderWave() {
 function renderDiscard() {
   const player = G.players[G.currentPlayerIndex];
   const excess = player.hand.length - CONFIG.HAND_MAX_START;
-  const handHTML = player.hand.map(id => cardHTML(id, 'item')).join('');
+  const handHTML = sortedCards(player.hand).map(id => cardHTML(id, 'item')).join('');
   return `
     <h1>⚔️ Greedy Shopkeepers</h1>
     <div class="info-bar">
-      <strong>Wave ${G.waveIndex + 1} / 3 — Starting Hand</strong>
+      <strong>Wave ${G.waveIndex + 1} / ${CONFIG.WAVE_COUNT} — Starting Hand</strong>
       <span>Turn: <strong>${player.name}</strong></span>
     </div>
     <div class="section">
@@ -706,6 +773,7 @@ function renderDiscard() {
         You have <strong>${player.hand.length}</strong> cards — discard <strong>${excess}</strong> more to begin your turn.
         Click a card to discard it.
       </p>
+      ${sortButtonsHTML()}
       <div class="card-row">${handHTML}</div>
     </div>`;
 }
@@ -714,7 +782,7 @@ function renderStash() {
   const player   = G.players[G.stashPlayerIndex];
   const sel      = G.stashSelectedIds;
   const levelSum = sel.reduce((s, id) => s + CARDS[id].level, 0);
-  const qualOk   = sel.length === CONFIG.STASH_QUALITY_COUNT;
+  const qualOk   = sel.length >= 1 && sel.length <= CONFIG.STASH_QUALITY_MAX;
   const qtyOk    = sel.length > 0 && levelSum <= CONFIG.STASH_QUANTITY_MAX;
 
   const lootHTML = sortedCards(player.lootPile).map(id =>
@@ -741,8 +809,8 @@ function renderStash() {
     <div class="section">
       <h2>📦 ${player.name}'s Loot Pile (${player.lootPile.length} cards)</h2>
       <div class="stash-hint">
-        <strong>Quality Stash:</strong> pick exactly ${CONFIG.STASH_QUALITY_COUNT} cards (any level). &nbsp;
-        <strong>Quantity Stash:</strong> pick any cards with combined level ≤ ${CONFIG.STASH_QUANTITY_MAX}.<br>
+        <strong>Quality Stash:</strong> pick 1–${CONFIG.STASH_QUALITY_MAX} cards of any level. &nbsp;
+        <strong>Quantity Stash:</strong> pick any number of cards whose combined level is ≤ ${CONFIG.STASH_QUANTITY_MAX} (no card-count limit).<br>
         Stashed cards score in the Final Scoring phase. Remaining loot returns to your hand.
       </div>
       ${sortButtonsHTML()}
@@ -750,7 +818,7 @@ function renderStash() {
       <div style="margin-top:10px;font-size:13px;color:#aaa">${selInfo}</div>
       <div class="btn-row">
         <button class="btn-success" onclick="handleStash('quality')" ${qualOk ? '' : 'disabled'}>
-          Quality Stash (exactly ${CONFIG.STASH_QUALITY_COUNT}) ${qualOk ? '✓' : ''}
+          Quality Stash (1–${CONFIG.STASH_QUALITY_MAX} cards) ${qualOk ? '✓ ' + sel.length + ' card' + (sel.length > 1 ? 's' : '') : ''}
         </button>
         <button class="btn-primary" onclick="handleStash('quantity')" ${qtyOk ? '' : 'disabled'}>
           Quantity Stash (sum ≤ ${CONFIG.STASH_QUANTITY_MAX}) ${qtyOk ? '✓ sum=' + levelSum : levelSum > CONFIG.STASH_QUANTITY_MAX ? '✗ too high' : ''}
@@ -853,9 +921,12 @@ function renderScoring() {
 }
 
 function renderGameover() {
-  const scores = G.players
-    .map((p, i) => ({ name: p.name, ...calcScore(i) }))
-    .sort((a, b) => b.total - a.total);
+  const scores = G.players.map((p, i) => {
+    const actual = calcScore(i);
+    const best   = calcBestScore(i);
+    const eff    = best.total > 0 ? Math.round(actual.total / best.total * 100) : 100;
+    return { name: p.name, ...actual, best, eff };
+  }).sort((a, b) => b.total - a.total);
 
   const maxScore = scores[0].total;
   const winners  = scores.filter(s => s.total === maxScore).map(s => s.name).join(' & ');
@@ -864,8 +935,11 @@ function renderGameover() {
     <div class="score-entry ${s.total === maxScore ? 'winner' : ''}">
       <span>${s.total === maxScore ? '🏆 ' : ''}${s.name}</span>
       <div style="text-align:right">
-        <div>${s.total} pts</div>
+        <div style="font-size:18px">${s.total} pts</div>
         <div class="score-breakdown">base ${s.base} + sets ${s.bonus}</div>
+        <div style="font-size:11px;color:#666;margin-top:3px">
+          ~best possible: ${s.best.total} pts &nbsp;·&nbsp; efficiency: ${s.eff}%
+        </div>
       </div>
     </div>`).join('');
 
@@ -879,6 +953,7 @@ function renderGameover() {
       <h2 style="text-align:center;font-size:22px;color:#ffd700;margin-bottom:18px;">🏆 Final Scores</h2>
       ${rows}
       <div style="text-align:center;margin-top:20px;font-size:18px">${headline}</div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:#555">~best possible is an approximate upper bound (greedy heuristic)</div>
     </div>
     <div style="text-align:center;margin-top:16px;">
       <button class="btn-primary" onclick="showSetup()" style="font-size:16px;padding:12px 36px;">Play Again</button>
