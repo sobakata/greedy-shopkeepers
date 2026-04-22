@@ -4,219 +4,540 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Greedy Shopkeepers</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Theme variables — Dungeon (default) ── */
+    /* ══════════════════════════════════════════════
+       THEME VARIABLES
+    ══════════════════════════════════════════════ */
+
+    /* DUNGEON — wave / combat phase */
     :root {
-      --bg:           #080812;
-      --surface:      #11112a;
-      --surface-alt:  #0c0820;
-      --surface-deep: #06060f;
-      --border:       #252442;
-      --text:         #c8c4b4;
-      --text-muted:   #5a566a;
-      --text-strong:  #ddd8c8;
-      --accent:       #e07a2a;
-      --gold:         #c89010;
-      --ok:           #5a9a5a;
-      --warn:         #c04040;
-      --pile-dead-bd: #252545;
-      --pile-dead-tx: #38386a;
-      --ghost-bd:     #3a3858;
-      --ghost-tx:     #a0a0c0;
-
-      --card-common-bg:   #0c1e0c;
-      --card-common-bd:   #3a7a3a;
-      --card-common-tx:   #a8c8a8;
-      --card-uncommon-bg: #081422;
-      --card-uncommon-bd: #2a6a9a;
-      --card-uncommon-tx: #9ab8d4;
-      --card-rare-bg:     #14082a;
-      --card-rare-bd:     #7a2a9a;
-      --card-rare-tx:     #c8a8e8;
-      --card-epic-bg:     #1c0c06;
-      --card-epic-bd:     #b05800;
-      --card-epic-tx:     #d8b080;
+      --bg:           #07090f;
+      --surface:      #0f1438;
+      --surface-alt:  #0a0e28;
+      --surface-deep: #05060c;
+      --border:       #253466;
+      --border-hi:    #4a6898;
+      --text:         #bcc4a8;
+      --text-muted:   #3e5068;
+      --text-strong:  #dcd8b8;
+      --accent:       #e87820;
+      --gold:         #c8a818;
+      --ok:           #48a040;
+      --warn:         #c03030;
+      --empty-bd:     #1a2450;
+      --empty-tx:     #253466;
     }
 
-    /* ── Theme variables — Shop (bright) ── */
-    body.theme-shop {
-      --bg:           #120a04;
-      --surface:      #1e1208;
-      --surface-alt:  #261808;
-      --surface-deep: #160e06;
-      --border:       #3a2810;
-      --text:         #ead8a8;
-      --text-muted:   #887050;
-      --text-strong:  #f0e4c0;
-      --accent:       #f0c040;
-      --gold:         #f0c040;
-      --ok:           #70c050;
-      --warn:         #e85030;
-      --pile-dead-bd: #3a2810;
-      --pile-dead-tx: #553a20;
-      --ghost-bd:     #5a4020;
-      --ghost-tx:     #c8a860;
-
-      --card-common-bg:   #183010;
-      --card-common-bd:   #58bb38;
-      --card-common-tx:   #c0e898;
-      --card-uncommon-bg: #0c1c3a;
-      --card-uncommon-bd: #4898e8;
-      --card-uncommon-tx: #a8cef8;
-      --card-rare-bg:     #200e3a;
-      --card-rare-bd:     #c050e8;
-      --card-rare-tx:     #e8b8ff;
-      --card-epic-bg:     #2c1406;
-      --card-epic-bd:     #f89820;
-      --card-epic-tx:     #ffe0a0;
+    /* STASH — loot / treasure phase */
+    body[data-theme="stash"] {
+      --bg:           #0e0800;
+      --surface:      #2a1a06;
+      --surface-alt:  #1e1004;
+      --surface-deep: #0c0800;
+      --border:       #5e3818;
+      --border-hi:    #9a6428;
+      --text:         #e0c888;
+      --text-muted:   #7a5828;
+      --text-strong:  #f0dca8;
+      --accent:       #d09828;
+      --gold:         #e0aa28;
+      --ok:           #58a838;
+      --warn:         #d04028;
+      --empty-bd:     #3a2210;
+      --empty-tx:     #5a3820;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* SHOP — scoring / gameover phase */
+    body[data-theme="shop"] {
+      --bg:           #0c0800;
+      --surface:      #241a04;
+      --surface-alt:  #1a1206;
+      --surface-deep: #0a0800;
+      --border:       #806020;
+      --border-hi:    #c09030;
+      --text:         #f0e0a8;
+      --text-muted:   #907848;
+      --text-strong:  #fff8d0;
+      --accent:       #f0c020;
+      --gold:         #f0c020;
+      --ok:           #68c048;
+      --warn:         #e84828;
+      --empty-bd:     #504010;
+      --empty-tx:     #706020;
+    }
+
+    /* ══════════════════════════════════════════════
+       BASE LAYOUT
+    ══════════════════════════════════════════════ */
     body {
-      background: var(--bg); color: var(--text);
-      font-family: system-ui, sans-serif; min-height: 100vh;
-      transition: background 0.4s, color 0.4s;
+      background-color: var(--bg);
+      /* Subtle scanline */
+      background-image: repeating-linear-gradient(
+        180deg,
+        transparent 0, transparent 3px,
+        rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px
+      );
+      color: var(--text);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      line-height: 1.9;
+      min-height: 100vh;
+      transition: background-color 0.35s;
     }
-    #app { max-width: 960px; margin: 0 auto; padding: 16px; }
 
-    h1 {
-      text-align: center; margin-bottom: 20px; font-size: 28px;
-      color: var(--accent); letter-spacing: 2px;
-      font-family: 'Cinzel', Georgia, serif;
-      text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    #app { max-width: 1100px; margin: 0 auto; padding: 16px 16px 40px; }
+
+    /* ══════════════════════════════════════════════
+       TYPOGRAPHY
+    ══════════════════════════════════════════════ */
+    .game-title {
+      text-align: center;
+      font-size: 18px;
+      color: var(--accent);
+      text-shadow: 3px 3px 0 #000;
+      letter-spacing: 3px;
+      padding: 12px 0 20px;
     }
-    h2 { margin-bottom: 10px; font-size: 18px; color: var(--text-strong); }
-    h3 { margin-bottom: 6px; font-size: 14px; color: var(--text-muted); font-weight: normal; }
+    h2 {
+      font-size: 10px;
+      color: var(--text-strong);
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    h3 {
+      font-size: 8px;
+      color: var(--text-muted);
+      font-weight: normal;
+      margin-bottom: 6px;
+    }
 
+    /* ══════════════════════════════════════════════
+       PANEL / WINDOW CHROME (SNES style)
+    ══════════════════════════════════════════════ */
+    .win {
+      background: var(--surface);
+      border: 3px solid var(--border);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.85);
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .win-alt {
+      background: var(--surface-alt);
+      border: 2px solid var(--border);
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.8);
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .win-deep {
+      background: var(--surface-deep);
+      border: 2px solid var(--border);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+
+    /* Bright top/left edge to suggest a lit panel face */
+    .win::before {
+      content: '';
+      display: block;
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-left: 1px solid rgba(255,255,255,0.04);
+    }
+
+    /* ══════════════════════════════════════════════
+       STATUS BAR
+    ══════════════════════════════════════════════ */
+    .status-bar {
+      background: var(--surface-deep);
+      border: 3px solid var(--border-hi);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.85);
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 8px;
+    }
+    .status-bar .sb-label { color: var(--text-muted); }
+    .status-bar .sb-val   { color: var(--text-strong); }
+    .status-bar .sb-wave  { color: var(--accent); font-size: 9px; }
+    .status-bar .sb-gold  { color: var(--gold); }
+
+    /* ══════════════════════════════════════════════
+       BUTTONS
+    ══════════════════════════════════════════════ */
     button {
-      cursor: pointer; border: none; border-radius: 6px;
-      padding: 8px 16px; font-size: 13px; font-weight: bold; transition: opacity 0.1s;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      cursor: pointer;
+      border: 2px solid;
+      padding: 9px 14px;
+      box-shadow: 3px 3px 0 #000;
+      transition: transform 0.05s, box-shadow 0.05s;
+      line-height: 1.5;
     }
-    button:disabled { opacity: 0.35; cursor: not-allowed; }
-    button:not(:disabled):hover { opacity: 0.85; }
-    .btn-primary   { background: #1976d2; color: #fff; }
-    .btn-success   { background: #388e3c; color: #fff; }
-    .btn-warning   { background: #f57c00; color: #fff; }
-    .btn-danger    { background: #c62828; color: #fff; }
-    .btn-secondary { background: #424242; color: #fff; }
-    .btn-ghost     { background: transparent; border: 1px solid var(--ghost-bd); color: var(--ghost-tx); }
+    button:not(:disabled):hover  { transform: translate(1px, 1px); box-shadow: 2px 2px 0 #000; }
+    button:not(:disabled):active { transform: translate(3px, 3px); box-shadow: none; }
+    button:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: 2px 2px 0 #000; }
 
-    .section {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 16px; margin-bottom: 14px;
-    }
-    .card-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
-    .btn-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .info-bar {
-      background: var(--surface-alt); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 16px;
-      margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
-    }
+    .btn-primary   { background: #16327a; border-color: #4878e0; color: #a8c8ff; }
+    .btn-success   { background: #164a18; border-color: #48a840; color: #88e868; }
+    .btn-warning   { background: #5a2e00; border-color: #c07018; color: #ffb838; }
+    .btn-danger    { background: #580e0e; border-color: #b83030; color: #ff8888; }
+    .btn-secondary { background: #242434; border-color: #585878; color: #b8b8d0; }
+    .btn-ghost     { background: transparent; border-color: var(--border); color: var(--text-muted); box-shadow: none; }
+    .btn-ghost:not(:disabled):hover { border-color: var(--border-hi); color: var(--text); box-shadow: none; transform: none; }
 
-    /* ── Card ── */
+    .btn-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .card-row { display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: flex-start; }
+
+    /* ══════════════════════════════════════════════
+       CARDS
+    ══════════════════════════════════════════════ */
     .card {
-      display: inline-flex; flex-direction: column; align-items: center;
-      justify-content: space-between; width: 74px; height: 104px; border-radius: 8px;
-      padding: 5px 4px 4px; border: 3px solid #444; cursor: pointer;
-      user-select: none; position: relative; flex-shrink: 0;
-      transition: transform 0.12s, box-shadow 0.12s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      width: 76px;
+      height: 108px;
+      padding: 6px 5px 5px;
+      border: 3px solid;
+      box-shadow: 3px 3px 0 #000;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-family: 'Press Start 2P', monospace;
+      transition: transform 0.07s, box-shadow 0.07s;
+      position: relative;
     }
-    .card:hover { transform: translateY(-3px); }
-    .card.selected { outline: 3px solid #fff; outline-offset: 3px; }
-    .card.assigned { opacity: 0.38; pointer-events: none; transform: none; }
-    .card .card-level { font-size: 19px; font-weight: 900; line-height: 1; align-self: flex-start; }
-    .card .card-emoji { font-size: 30px; }
-    .card .card-type  { font-size: 9px; text-align: center; line-height: 1.3; opacity: 0.85; }
-
-    .rarity-common   { background: var(--card-common-bg);   border-color: var(--card-common-bd);   color: var(--card-common-tx);   box-shadow: 0 0 6px color-mix(in srgb, var(--card-common-bd) 35%, transparent); }
-    .rarity-uncommon { background: var(--card-uncommon-bg); border-color: var(--card-uncommon-bd); color: var(--card-uncommon-tx); box-shadow: 0 0 6px color-mix(in srgb, var(--card-uncommon-bd) 35%, transparent); }
-    .rarity-rare     { background: var(--card-rare-bg);     border-color: var(--card-rare-bd);     color: var(--card-rare-tx);     box-shadow: 0 0 6px color-mix(in srgb, var(--card-rare-bd) 35%, transparent); }
-    .rarity-epic     { background: var(--card-epic-bg);     border-color: var(--card-epic-bd);     color: var(--card-epic-tx);     box-shadow: 0 0 6px color-mix(in srgb, var(--card-epic-bd) 35%, transparent); }
-
-    /* ── Wave arena ── */
-    .wave-arena { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
-    .pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-    .pile-dead {
-      width: 74px; height: 104px; border: 2px dashed var(--pile-dead-bd); border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; color: var(--pile-dead-tx); font-size: 22px;
+    .card:hover:not(.assigned):not(.no-hover) {
+      transform: translate(-2px, -5px);
+      box-shadow: 5px 8px 0 #000;
     }
-    .pile-count { font-size: 11px; color: var(--text-muted); }
-    .pile-btn   { font-size: 11px; padding: 4px 8px; margin-top: 2px; }
+    .card.selected {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+      transform: translate(-2px, -6px);
+      box-shadow: 5px 9px 0 #000;
+    }
+    .card.assigned { opacity: 0.28; pointer-events: none; transform: none !important; box-shadow: 2px 2px 0 #000 !important; }
 
-    /* ── Setup ── */
-    .setup-screen { text-align: center; padding: 48px 20px; }
-    .setup-screen p { color: var(--text-muted); margin-bottom: 8px; }
-    .player-count-row { display: flex; justify-content: center; gap: 14px; margin: 28px 0 20px; }
-    .player-count-row button { width: 64px; height: 64px; font-size: 28px; border-radius: 14px; }
+    .card-level { font-size: 17px; line-height: 1; align-self: flex-start; }
+    .card-emoji { font-size: 26px; flex-shrink: 0; }
+    .card-type  { font-size: 6px; text-align: center; line-height: 1.5; }
 
-    /* ── Interstitial ── */
-    .interstitial { text-align: center; padding: 72px 20px; }
-    .interstitial h2 { font-size: 30px; margin-bottom: 12px; color: var(--text-strong); }
-    .interstitial p  { color: var(--text-muted); margin-bottom: 36px; font-size: 16px; }
+    /* Rarity colors — vivid & saturated for pixel art feel */
+    .rarity-common   { background: #0a1e08; border-color: #3e9828; color: #88cc68; }
+    .rarity-uncommon { background: #070e26; border-color: #2868c8; color: #68a4f8; }
+    .rarity-rare     { background: #140620; border-color: #8828c0; color: #c870f0; }
+    .rarity-epic     { background: #1e0800; border-color: #d85808; color: #f0a030; }
 
-    /* ── Stash ── */
+    /* Monster card face gets a slight overlay tint to distinguish */
+    .card.monster-face { filter: saturate(0.85) brightness(0.95); }
+
+    /* ══════════════════════════════════════════════
+       CARD STACK — depth indicator
+    ══════════════════════════════════════════════ */
+    .pile-stack {
+      position: relative;
+      width: 76px;
+      height: 108px;
+      flex-shrink: 0;
+    }
+    .pile-stack .card {
+      position: relative;
+      z-index: 3;
+    }
+    /* One card peeking behind */
+    .pile-stack.depth-2::after,
+    .pile-stack.depth-many::after {
+      content: '';
+      position: absolute;
+      top: 5px; left: 5px;
+      width: 76px; height: 108px;
+      background: #0a0e28;
+      border: 3px solid #2a3460;
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.9);
+      z-index: 2;
+    }
+    /* Second card peeking even further behind */
+    .pile-stack.depth-many::before {
+      content: '';
+      position: absolute;
+      top: 10px; left: 10px;
+      width: 76px; height: 108px;
+      background: #06091e;
+      border: 3px solid #1c2448;
+      box-shadow: 3px 3px 0 rgba(0,0,0,0.9);
+      z-index: 1;
+    }
+
+    /* ══════════════════════════════════════════════
+       WAVE ARENA — 4-column grid
+    ══════════════════════════════════════════════ */
+    .wave-arena {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 600px) { .wave-arena { grid-template-columns: repeat(4, 1fr); gap: 6px; } }
+
+    .pile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .pile-empty {
+      width: 76px; height: 108px;
+      border: 2px dashed var(--empty-bd);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--empty-tx);
+      font-size: 18px;
+    }
+    .pile-count { font-size: 7px; color: var(--text-muted); position: relative; z-index: 10; margin-top: 12px; }
+    .pile-btn   { font-size: 7px; padding: 5px 8px; }
+
+    /* ══════════════════════════════════════════════
+       COMBAT STATUS
+    ══════════════════════════════════════════════ */
+    .combat-status {
+      margin-top: 12px;
+      font-size: 8px;
+      padding: 10px 14px;
+      border: 2px solid;
+      line-height: 1.8;
+    }
+    .combat-ok   { border-color: var(--ok);   color: var(--ok);   background: rgba(72,160,64,0.1); }
+    .combat-warn { border-color: var(--warn); color: var(--warn); background: rgba(192,48,48,0.1); }
+
+    /* ══════════════════════════════════════════════
+       SORT BUTTONS
+    ══════════════════════════════════════════════ */
+    .sort-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 7px;
+    }
+    .sort-row .sort-label { color: var(--text-muted); }
+    .sort-btn { font-size: 7px; padding: 5px 10px; box-shadow: 2px 2px 0 #000; }
+    .sort-btn.active { background: #303048; border-color: var(--border-hi); color: var(--text-strong); }
+
+    /* ══════════════════════════════════════════════
+       SETUP SCREEN
+    ══════════════════════════════════════════════ */
+    .setup-screen { text-align: center; padding: 40px 20px 60px; }
+
+    /* Pixel art "market" banner using CSS */
+    .setup-banner {
+      margin: 0 auto 32px;
+      max-width: 500px;
+      height: 120px;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid var(--border);
+      box-shadow: 4px 4px 0 #000;
+      background:
+        linear-gradient(180deg, #0a1a3a 0%, #0a1a3a 55%, #1a3010 55%, #1a3010 100%);
+    }
+    /* Buildings silhouette */
+    .setup-banner::before {
+      content: '';
+      position: absolute;
+      bottom: 30px; left: 0; right: 0;
+      height: 70px;
+      background:
+        linear-gradient(90deg,
+          transparent 0, transparent 20px,
+          #0e2440 20px, #0e2440 80px,
+          transparent 80px, transparent 100px,
+          #0c1e38 100px, #0c1e38 170px,
+          transparent 170px, transparent 190px,
+          #0e2440 190px, #0e2440 240px,
+          transparent 240px, transparent 260px,
+          #0c1e38 260px, #0c1e38 330px,
+          transparent 330px, transparent 360px,
+          #0e2440 360px, #0e2440 430px,
+          transparent 430px
+        );
+    }
+    /* Ground */
+    .setup-banner::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 30px;
+      background: #2a1808;
+      border-top: 3px solid #5a3818;
+    }
+
+    .setup-banner-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 2;
+    }
+    .banner-title {
+      font-size: 16px;
+      color: #f0c828;
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 2px;
+    }
+    .banner-sub {
+      font-size: 7px;
+      color: #a09870;
+    }
+
+    .setup-prompt { color: var(--text-muted); font-size: 8px; margin-bottom: 12px; }
+    .player-count-row { display: flex; justify-content: center; gap: 14px; margin: 16px 0 24px; }
+    .player-count-btn { width: 68px; height: 68px; font-size: 22px; padding: 0; }
+
+    /* ══════════════════════════════════════════════
+       INTERSTITIAL
+    ══════════════════════════════════════════════ */
+    .interstitial {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    .interstitial .inter-phase {
+      font-size: 8px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .interstitial h2 { font-size: 16px; margin-bottom: 10px; color: var(--text-strong); }
+    .interstitial .inter-sub { color: var(--text-muted); margin-bottom: 40px; font-size: 8px; }
+
+    /* ══════════════════════════════════════════════
+       STASH HINT
+    ══════════════════════════════════════════════ */
     .stash-hint {
-      background: var(--surface-alt); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 14px;
-      margin-bottom: 10px; font-size: 13px; line-height: 1.6; color: var(--text-muted);
+      background: var(--surface-alt);
+      border: 2px solid var(--border);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 7px;
+      line-height: 2.2;
+      color: var(--text-muted);
     }
     .stash-hint strong { color: var(--text-strong); }
 
-    /* ── Scoring ── */
+    /* ══════════════════════════════════════════════
+       SCORING
+    ══════════════════════════════════════════════ */
     .set-bucket {
-      background: var(--surface-deep); border: 2px dashed var(--border); border-radius: 8px;
-      padding: 10px 12px; margin-bottom: 8px;
+      background: var(--surface-deep);
+      border: 2px dashed var(--border);
+      padding: 10px 12px;
+      margin-bottom: 8px;
     }
-    .set-bucket.valid { border-color: #388e3c; }
-    .set-bucket h4 { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
+    .set-bucket.valid { border-color: var(--ok); border-style: solid; }
+    .set-bucket h4 { font-size: 7px; color: var(--text-muted); margin-bottom: 8px; }
 
     .set-type-btn {
-      text-align: left; padding: 9px 13px; font-size: 12px;
-      font-weight: normal; line-height: 1.4;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 7px;
+      font-weight: normal;
+      line-height: 2;
     }
-    .set-type-btn .set-name  { font-weight: bold; font-size: 13px; display: block; }
-    .set-type-btn .set-desc  { color: var(--text-muted); }
-    .set-type-btn:not(:disabled) { border: 1px solid #388e3c; background: #1a2e1a; color: #c8f0c8; }
+    .set-type-btn .set-name { font-size: 8px; display: block; margin-bottom: 3px; }
+    .set-type-btn .set-desc { color: var(--text-muted); font-size: 7px; }
+    .set-type-btn:not(:disabled) {
+      border-color: var(--ok) !important;
+      background: rgba(72,168,64,0.14) !important;
+      color: #88e868 !important;
+    }
 
-    /* ── Scoreboard ── */
+    .score-ref {
+      font-size: 7px;
+      color: var(--text-muted);
+      line-height: 2.2;
+    }
+    .score-ref strong { color: var(--text); }
+
+    /* ══════════════════════════════════════════════
+       SCOREBOARD
+    ══════════════════════════════════════════════ */
     .score-entry {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 8px; border-bottom: 1px solid var(--border); font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 10px;
+      border-bottom: 2px solid var(--border);
+      font-size: 10px;
     }
-    .score-entry.winner { color: var(--gold); font-weight: bold; font-size: 20px; }
-    .score-breakdown { font-size: 12px; color: var(--text-muted); }
-
-    /* ── Tags ── */
-    .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-    .tag-common   { background: #4caf50; color: #000; }
-    .tag-uncommon { background: #42a5f5; color: #000; }
-    .tag-rare     { background: #ab47bc; color: #fff; }
-    .tag-epic     { background: #ff9800; color: #000; }
-
-    .combat-status { margin-top: 8px; font-size: 13px; }
-    .ok   { color: var(--ok); }
-    .warn { color: var(--warn); }
+    .score-entry.winner { color: var(--gold); font-size: 12px; }
+    .score-breakdown { font-size: 7px; color: var(--text-muted); text-align: right; margin-top: 3px; }
+    .score-total { font-size: 28px; color: var(--gold); text-shadow: 2px 2px 0 #000; }
 
     .score-summary {
-      font-size: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline;
+      font-size: 9px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: baseline;
+      line-height: 2;
     }
-    .score-total { font-size: 26px; font-weight: bold; color: var(--gold); }
+    .score-summary .big { font-size: 22px; color: var(--gold); text-shadow: 2px 2px 0 #000; }
+    .score-summary .dim { color: var(--text-muted); }
 
-    .players-overview {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;
-    }
+    /* ══════════════════════════════════════════════
+       TAGS
+    ══════════════════════════════════════════════ */
+    .tag { display: inline-block; padding: 2px 7px; font-size: 7px; border: 1px solid; }
+    .tag-common   { background: #0a1e08; border-color: #3e9828; color: #88cc68; }
+    .tag-uncommon { background: #070e26; border-color: #2868c8; color: #68a4f8; }
+    .tag-rare     { background: #140620; border-color: #8828c0; color: #c870f0; }
+    .tag-epic     { background: #1e0800; border-color: #d85808; color: #f0a030; }
+
+    /* ══════════════════════════════════════════════
+       PLAYERS OVERVIEW
+    ══════════════════════════════════════════════ */
+    .players-overview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     .player-pill {
-      background: var(--surface-deep); border-radius: 8px; padding: 8px 12px;
-      border: 1px solid var(--border); min-width: 110px;
+      background: var(--surface-deep);
+      border: 2px solid var(--border);
+      box-shadow: 2px 2px 0 #000;
+      padding: 8px 12px;
+      min-width: 100px;
     }
     .player-pill.active { border-color: var(--gold); }
-    .player-pill .pill-name { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
-    .player-pill .pill-stats { font-size: 11px; color: var(--text-muted); }
+    .player-pill .pill-name  { font-size: 9px; margin-bottom: 4px; color: var(--text-strong); }
+    .player-pill .pill-stats { font-size: 7px; color: var(--text-muted); line-height: 1.8; }
+
+    /* ══════════════════════════════════════════════
+       MISC HELPERS
+    ══════════════════════════════════════════════ */
+    .dim   { color: var(--text-muted); }
+    .gold  { color: var(--gold); }
+    .ok    { color: var(--ok); }
+    .warn  { color: var(--warn); }
+    .strong { color: var(--text-strong); }
+
+    em { font-style: normal; color: var(--text-muted); font-size: 8px; }
+
+    .rule { border: none; border-top: 2px solid var(--border); margin: 12px 0; }
   </style>
 </head>
-<body>
+<body data-theme="dungeon">
 <div id="app"></div>
 <script>
 'use strict';
@@ -253,9 +574,6 @@ const ITEM_EMOJI = {
 };
 const RARITY_LABEL = {
   common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic',
-};
-const RARITY_TAG = {
-  common: 'tag-common', uncommon: 'tag-uncommon', rare: 'tag-rare', epic: 'tag-epic',
 };
 
 const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, epic: 3 };
@@ -512,12 +830,12 @@ function confirmStash(type) {
 // SCORING PHASE
 // ============================================================
 const SET_TYPES = [
-  { key: 'matching_rarity', label: 'Matching Rarity',   desc: 'Min 2 cards, same rarity' },
-  { key: 'matching_level',  label: 'Matching Level',    desc: 'Min 2 cards, same level' },
-  { key: 'matching_type',   label: 'Matching Item Type',desc: 'Min 2 cards, same item type' },
-  { key: 'rarity_rainbow',  label: 'Rarity Rainbow',    desc: 'Exactly 4 cards, one of each rarity' },
-  { key: 'item_type_rainbow',label:'Item Type Rainbow', desc: 'Exactly 5 cards, one of each item type' },
-  { key: 'level_straight',  label: 'Level Straight',    desc: 'Min 3 cards, consecutive levels' },
+  { key: 'matching_rarity', label: 'Matching Rarity',    desc: 'Min 2 cards, same rarity' },
+  { key: 'matching_level',  label: 'Matching Level',     desc: 'Min 2 cards, same level' },
+  { key: 'matching_type',   label: 'Matching Item Type', desc: 'Min 2 cards, same item type' },
+  { key: 'rarity_rainbow',  label: 'Rarity Rainbow',     desc: 'Exactly 4 — one of each rarity' },
+  { key: 'item_type_rainbow',label:'Type Rainbow',       desc: 'Exactly 5 — one of each item type' },
+  { key: 'level_straight',  label: 'Level Straight',     desc: 'Min 3 cards, consecutive levels' },
 ];
 
 function validateSet(type, cardIds) {
@@ -679,20 +997,6 @@ function calcScore(playerIndex) {
 }
 
 // ============================================================
-// RENDER HELPERS
-// ============================================================
-function cardHTML(id, face, extraClass = '') {
-  const c     = CARDS[id];
-  const emoji = face === 'monster' ? MONSTER_EMOJI[c.monsterType] : ITEM_EMOJI[c.itemType];
-  const type  = face === 'monster' ? c.monsterType : c.itemType;
-  return `<div class="card rarity-${c.rarity} ${extraClass}" data-id="${id}">
-    <span class="card-level">${c.level}</span>
-    <span class="card-emoji">${emoji}</span>
-    <span class="card-type">${type}</span>
-  </div>`;
-}
-
-// ============================================================
 // SORTING
 // ============================================================
 function sortedCards(cardIds) {
@@ -717,44 +1021,72 @@ function toggleSort(key) {
   render();
 }
 
-function sortButtonsHTML() {
+function sortRowHTML() {
   const btn = key => {
     const i = G.cardSort.indexOf(key);
-    const badge  = i !== -1 ? ` ${'①②③'[i]}` : '';
-    const active = i !== -1 ? ' style="background:#444;color:#fff"' : '';
+    const badge  = i !== -1 ? ' ' + '①②③'[i] : '';
+    const active = i !== -1 ? ' active' : '';
     const label  = key.charAt(0).toUpperCase() + key.slice(1);
-    return `<button class="btn-ghost" onclick="toggleSort('${key}')"${active}>By ${label}${badge}</button>`;
+    return `<button class="btn-ghost sort-btn${active}" onclick="toggleSort('${key}')">
+      ${label}${badge}
+    </button>`;
   };
-  return `<div class="btn-row" style="margin-bottom:8px">
-    <span style="color:#888;font-size:13px;align-self:center">Sort:</span>
+  return `<div class="sort-row">
+    <span class="sort-label">SORT:</span>
     ${btn('rarity')}${btn('level')}${btn('type')}
+  </div>`;
+}
+
+// ============================================================
+// RENDER HELPERS
+// ============================================================
+function cardHTML(id, face, extraClass = '') {
+  const c     = CARDS[id];
+  const emoji = face === 'monster' ? MONSTER_EMOJI[c.monsterType] : ITEM_EMOJI[c.itemType];
+  const type  = face === 'monster' ? c.monsterType : c.itemType;
+  const faceClass = face === 'monster' ? ' monster-face' : '';
+  return `<div class="card rarity-${c.rarity}${faceClass} ${extraClass}" data-id="${id}">
+    <span class="card-level">${c.level}</span>
+    <span class="card-emoji">${emoji}</span>
+    <span class="card-type">${type}</span>
   </div>`;
 }
 
 function scoringReferenceHTML() {
   const S = CONFIG.SCORING;
-  const mpts = S.MATCHING_SET_POINTS;
-  const spts = S.STRAIGHT_POINTS;
-  const mRows = mpts.slice(2).map((pts, i) => `<span><strong>${i + 2}</strong>: ${pts}</span>`).join(' &nbsp;');
-  const sRows = spts.slice(3).map((pts, i) => `<span><strong>${i + 3}</strong>: ${pts}</span>`).join(' &nbsp;');
-  return `<div class="section" style="font-size:12px;color:#aaa">
-    <h3 style="margin-bottom:8px">📋 Scoring Reference</h3>
-    <div style="margin-bottom:6px"><strong style="color:#ccc">Matching Rarity / Level / Type</strong> (min 2 cards, same attribute) &nbsp;&nbsp; ${mRows}</div>
-    <div style="margin-bottom:6px"><strong style="color:#ccc">Level Straight</strong> (min 3 consecutive levels) &nbsp;&nbsp; ${sRows}</div>
-    <div><strong style="color:#ccc">Rarity Rainbow</strong> (one of each rarity, 4 cards): <strong>${S.RARITY_RAINBOW} pts</strong>
-    &nbsp;&nbsp;&nbsp; <strong style="color:#ccc">Item Type Rainbow</strong> (one of each type, 5 cards): <strong>${S.ITEM_TYPE_RAINBOW} pts</strong></div>
+  const mRows = S.MATCHING_SET_POINTS.slice(2).map((pts, i) => `<strong>${i+2}</strong>:${pts}`).join('  ');
+  const sRows = S.STRAIGHT_POINTS.slice(3).map((pts, i) => `<strong>${i+3}</strong>:${pts}`).join('  ');
+  return `<div class="win score-ref">
+    <h3 style="margin-bottom:10px">SCORING REF</h3>
+    <div style="margin-bottom:8px"><strong class="strong">Matching</strong> (same rarity/level/type, min 2) &nbsp; ${mRows}</div>
+    <div style="margin-bottom:8px"><strong class="strong">Level Straight</strong> (min 3 consecutive) &nbsp; ${sRows}</div>
+    <div>
+      <strong class="strong">Rarity Rainbow</strong> (4 cards, one each): <strong>${S.RARITY_RAINBOW}pts</strong>
+      &nbsp;&nbsp;
+      <strong class="strong">Type Rainbow</strong> (5 cards, one each): <strong>${S.ITEM_TYPE_RAINBOW}pts</strong>
+    </div>
   </div>`;
+}
+
+// ============================================================
+// THEME CONTROLLER
+// ============================================================
+function setTheme() {
+  let theme = 'dungeon';
+  if (G.phase === 'stash' || (G.phase === 'interstitial' && G.interstitialNext === 'stash-next')) {
+    theme = 'stash';
+  } else if (['scoring', 'gameover'].includes(G.phase) ||
+             (G.phase === 'interstitial' && G.interstitialNext === 'scoring-next')) {
+    theme = 'shop';
+  }
+  document.body.dataset.theme = theme;
 }
 
 // ============================================================
 // RENDER FUNCTIONS
 // ============================================================
 function render() {
-  const shopPhases = new Set(['stash', 'scoring', 'gameover']);
-  const isShop = shopPhases.has(G.phase) ||
-    (G.phase === 'interstitial' && G.interstitialNext !== 'wave-turn');
-  document.body.classList.toggle('theme-shop', isShop);
-
+  setTheme();
   const app = document.getElementById('app');
   switch (G.phase) {
     case 'wave':         app.innerHTML = renderWave();         break;
@@ -771,56 +1103,57 @@ function renderWave() {
   const waveNum = G.waveIndex + 1;
   const sel = G.selectedCardIds;
 
-  // Combat status line
+  // Combat status
   let combatStatus = '';
   if (sel.length > 0) {
     const items = sel.map(id => CARDS[id]);
     const raritySet = new Set(items.map(c => c.rarity));
     const sum = items.reduce((s, c) => s + c.level, 0);
     if (raritySet.size > 1) {
-      combatStatus = `<div class="combat-status warn">⚠ Mixed rarities — cards must share a rarity to combine</div>`;
+      combatStatus = `<div class="combat-status combat-warn">✗ Mixed rarities — all cards must share a rarity</div>`;
     } else {
       const r = [...raritySet][0];
-      combatStatus = `<div class="combat-status ok">✓ ${sum} total level (${RARITY_LABEL[r]}) — select a pile to fight</div>`;
+      combatStatus = `<div class="combat-status combat-ok">✓ ${sum} power (${RARITY_LABEL[r]}) — click a monster pile to fight</div>`;
     }
   }
 
-  // Wave piles
+  // Arena piles
   let pilesHTML = '';
   G.wavePiles.forEach((pile, pi) => {
     if (pile.length === 0) {
-      pilesHTML += `<div class="pile"><div class="pile-dead">✓</div><div class="pile-count">cleared</div></div>`;
+      pilesHTML += `<div class="pile"><div class="pile-empty">✓</div><div class="pile-count">cleared</div></div>`;
       return;
     }
-    const topId  = pile[pile.length - 1];
+    const topId = pile[pile.length - 1];
     const canFight = sel.length > 0 && canDefeat(sel, topId);
-    const btnDisabled = sel.length === 0 || !canFight ? 'disabled' : '';
+    const stackClass = pile.length === 1 ? '' : pile.length === 2 ? 'depth-2' : 'depth-many';
     pilesHTML += `<div class="pile">
-      ${cardHTML(topId, 'monster')}
-      <div class="pile-count">${pile.length} in pile</div>
-      <button class="btn-primary pile-btn" onclick="handleDefeat(${pi})" ${btnDisabled}>
-        Fight${canFight ? ' ✓' : ''}
+      <div class="pile-stack ${stackClass}">
+        ${cardHTML(topId, 'monster')}
+      </div>
+      <div class="pile-count">${pile.length} deep</div>
+      <button class="btn-danger pile-btn" onclick="handleDefeat(${pi})" ${canFight ? '' : 'disabled'}>
+        ${canFight ? 'FIGHT ✓' : 'FIGHT'}
       </button>
     </div>`;
   });
 
-  // Player's hand
-  const handHTML = sortedCards(player.hand).map(id => {
-    const isSel = sel.includes(id);
-    return cardHTML(id, 'item', isSel ? 'selected' : '');
-  }).join('') || '<em style="color:#444">No cards</em>';
+  // Hand cards
+  const handHTML = sortedCards(player.hand).map(id =>
+    cardHTML(id, 'item', sel.includes(id) ? 'selected' : '')
+  ).join('') || '<em>No cards in hand</em>';
 
-  // Loot pile (embargoed)
+  // Loot pile
   const lootSection = player.lootPile.length > 0 ? `
-    <div class="section">
-      <h3>📦 Loot Pile — embargoed this wave (${player.lootPile.length} cards)</h3>
+    <div class="win">
+      <h3>LOOT PILE — embargoed this wave (${player.lootPile.length} cards)</h3>
       <div class="card-row">${player.lootPile.map(id => cardHTML(id, 'item', 'assigned')).join('')}</div>
     </div>` : '';
 
   // Players overview (multiplayer only)
   const overviewSection = G.players.length > 1 ? `
-    <div class="section">
-      <h3>Players</h3>
+    <div class="win">
+      <h3>PLAYERS</h3>
       <div class="players-overview">
         ${G.players.map(p => `
           <div class="player-pill ${p.id === G.currentPlayerIndex ? 'active' : ''}">
@@ -831,26 +1164,27 @@ function renderWave() {
     </div>` : '';
 
   return `
-    <h1>⚔️ Greedy Shopkeepers</h1>
-    <div class="info-bar">
-      <strong>Wave ${waveNum} / ${CONFIG.WAVE_COUNT}</strong>
-      <span>Turn: <strong>${player.name}</strong></span>
-      <span style="color:#888">Draw pile: ${G.drawPile.length}</span>
+    <div class="game-title">⚔ GREEDY SHOPKEEPERS</div>
+
+    <div class="status-bar">
+      <span class="sb-wave">WAVE ${waveNum} / ${CONFIG.WAVE_COUNT}</span>
+      <span><span class="sb-label">TURN:</span> <span class="sb-val">${player.name}</span></span>
+      <span class="sb-label">Draw pile: ${G.drawPile.length}</span>
     </div>
 
-    <div class="section">
-      <h2>🏟️ Wave ${waveNum} Arena</h2>
+    <div class="win">
+      <h2>▸ WAVE ${waveNum} ARENA</h2>
       <div class="wave-arena">${pilesHTML}</div>
     </div>
 
-    <div class="section">
-      <h2>🃏 ${player.name}'s Hand (${player.hand.length})</h2>
-      ${sortButtonsHTML()}
+    <div class="win">
+      <h2>▸ ${player.name.toUpperCase()}'S HAND (${player.hand.length})</h2>
+      ${sortRowHTML()}
       <div class="card-row">${handHTML}</div>
       ${combatStatus}
       <div class="btn-row">
-        <button class="btn-ghost" onclick="handleClearSel()">Clear selection</button>
-        <button class="btn-secondary" onclick="handleForfeit()">Forfeit — draw 1 card</button>
+        <button class="btn-ghost" onclick="handleClearSel()">Clear sel.</button>
+        <button class="btn-secondary" onclick="handleForfeit()">Forfeit — draw 1</button>
       </div>
     </div>
 
@@ -863,18 +1197,19 @@ function renderDiscard() {
   const excess = player.hand.length - CONFIG.HAND_MAX_START;
   const handHTML = sortedCards(player.hand).map(id => cardHTML(id, 'item')).join('');
   return `
-    <h1>⚔️ Greedy Shopkeepers</h1>
-    <div class="info-bar">
-      <strong>Wave ${G.waveIndex + 1} / ${CONFIG.WAVE_COUNT} — Starting Hand</strong>
-      <span>Turn: <strong>${player.name}</strong></span>
+    <div class="game-title">⚔ GREEDY SHOPKEEPERS</div>
+
+    <div class="status-bar">
+      <span class="sb-wave">WAVE ${G.waveIndex + 1} / ${CONFIG.WAVE_COUNT}</span>
+      <span><span class="sb-label">PLAYER:</span> <span class="sb-val">${player.name}</span></span>
     </div>
-    <div class="section">
-      <h2>🗑️ Discard down to ${CONFIG.HAND_MAX_START}</h2>
-      <p style="color:#e09030;margin-bottom:12px">
-        You have <strong>${player.hand.length}</strong> cards — discard <strong>${excess}</strong> more to begin your turn.
-        Click a card to discard it.
-      </p>
-      ${sortButtonsHTML()}
+
+    <div class="win">
+      <h2>▸ DISCARD DOWN TO ${CONFIG.HAND_MAX_START}</h2>
+      <div class="combat-status combat-warn" style="margin-bottom:14px">
+        You have ${player.hand.length} cards — discard ${excess} more to begin your turn. Click a card to discard it.
+      </div>
+      ${sortRowHTML()}
       <div class="card-row">${handHTML}</div>
     </div>`;
 }
@@ -888,41 +1223,43 @@ function renderStash() {
 
   const lootHTML = sortedCards(player.lootPile).map(id =>
     cardHTML(id, 'item', sel.includes(id) ? 'selected' : '')
-  ).join('') || '<em style="color:#444">Loot pile is empty</em>';
+  ).join('') || '<em>Loot pile is empty</em>';
 
   const selInfo = sel.length > 0
-    ? `Selected: ${sel.length} card${sel.length > 1 ? 's' : ''}, level sum <strong>${levelSum}</strong>`
-    : 'Click cards to select them';
+    ? `Selected: ${sel.length} card${sel.length > 1 ? 's' : ''} — level sum <span class="gold">${levelSum}</span>`
+    : '<span class="dim">Click cards to select them</span>';
 
   const currentStashSection = player.stash.length > 0 ? `
-    <div class="section">
-      <h3>🏦 ${player.name}'s Current Stash (${player.stash.length} cards)</h3>
+    <div class="win">
+      <h3>${player.name.toUpperCase()}'S STASH (${player.stash.length} cards)</h3>
       <div class="card-row">${player.stash.map(id => cardHTML(id, 'item', 'assigned')).join('')}</div>
     </div>` : '';
 
   return `
-    <h1>⚔️ Greedy Shopkeepers</h1>
-    <div class="info-bar">
-      <strong>Wave ${G.waveIndex + 1} — Stash Phase</strong>
-      <span><strong>${player.name}</strong> is stashing</span>
+    <div class="game-title">◆ STASH PHASE</div>
+
+    <div class="status-bar">
+      <span class="sb-wave">WAVE ${G.waveIndex + 1} COMPLETE</span>
+      <span><span class="sb-label">STASHING:</span> <span class="sb-val">${player.name}</span></span>
     </div>
 
-    <div class="section">
-      <h2>📦 ${player.name}'s Loot Pile (${player.lootPile.length} cards)</h2>
+    <div class="win">
+      <h2>▸ ${player.name.toUpperCase()}'S LOOT PILE (${player.lootPile.length} cards)</h2>
       <div class="stash-hint">
-        <strong>Quality Stash:</strong> pick 1–${CONFIG.STASH_QUALITY_MAX} cards of any level. &nbsp;
-        <strong>Quantity Stash:</strong> pick any number of cards whose combined level is ≤ ${CONFIG.STASH_QUANTITY_MAX} (no card-count limit).<br>
-        Stashed cards score in the Final Scoring phase. Remaining loot returns to your hand.
+        <strong>QUALITY STASH</strong> — pick 1–${CONFIG.STASH_QUALITY_MAX} cards of any level.
+        &nbsp;&nbsp;
+        <strong>QUANTITY STASH</strong> — pick any number of cards whose combined level ≤ ${CONFIG.STASH_QUANTITY_MAX}.
+        <br>Remaining loot returns to your hand.
       </div>
-      ${sortButtonsHTML()}
+      ${sortRowHTML()}
       <div class="card-row">${lootHTML}</div>
-      <div style="margin-top:10px;font-size:13px;color:#aaa">${selInfo}</div>
+      <div style="margin-top:10px;font-size:8px">${selInfo}</div>
       <div class="btn-row">
         <button class="btn-success" onclick="handleStash('quality')" ${qualOk ? '' : 'disabled'}>
-          Quality Stash (1–${CONFIG.STASH_QUALITY_MAX} cards) ${qualOk ? '✓ ' + sel.length + ' card' + (sel.length > 1 ? 's' : '') : ''}
+          Quality Stash${qualOk ? ' (' + sel.length + ')' : ''} ✓
         </button>
         <button class="btn-primary" onclick="handleStash('quantity')" ${qtyOk ? '' : 'disabled'}>
-          Quantity Stash (sum ≤ ${CONFIG.STASH_QUANTITY_MAX}) ${qtyOk ? '✓ sum=' + levelSum : levelSum > CONFIG.STASH_QUANTITY_MAX ? '✗ too high' : ''}
+          Quantity Stash${qtyOk ? ' (sum=' + levelSum + ')' : levelSum > CONFIG.STASH_QUANTITY_MAX ? ' ✗ too high' : ''}
         </button>
         <button class="btn-ghost" onclick="handleClearStashSel()">Clear</button>
       </div>
@@ -932,29 +1269,28 @@ function renderStash() {
 }
 
 function renderScoring() {
-  const player = G.players[G.scoringPlayerIndex];
-  const sel    = G.scoringSelected;
-  const asgn   = G.scoringAssigned;
-
+  const player   = G.players[G.scoringPlayerIndex];
+  const sel      = G.scoringSelected;
+  const asgn     = G.scoringAssigned;
   const baseScore = player.stash.reduce((s, id) => s + CARDS[id].level, 0);
   const setScore  = G.scoringSets.reduce((s, set) => s + set.points, 0);
   const total     = baseScore + setScore;
 
   const stashHTML = player.stash.length > 0
-    ? sortedCards(player.stash).map(id => {
-        if (asgn[id]) return cardHTML(id, 'item', 'assigned');
-        return cardHTML(id, 'item', sel.includes(id) ? 'selected' : '');
-      }).join('')
-    : '<em style="color:#444">No stashed cards</em>';
+    ? sortedCards(player.stash).map(id =>
+        asgn[id]
+          ? cardHTML(id, 'item', 'assigned')
+          : cardHTML(id, 'item', sel.includes(id) ? 'selected' : '')
+      ).join('')
+    : '<em>No stashed cards</em>';
 
-  // Eligible (selected and unassigned) for set assignment
   const eligible = sel.filter(id => !asgn[id]);
 
   const setButtons = SET_TYPES.map(st => {
     const valid = validateSet(st.key, eligible);
     const pts   = valid ? scoreSet(st.key, eligible) : 0;
     return `<button class="btn-secondary set-type-btn" onclick="handleAssignSet('${st.key}')" ${valid ? '' : 'disabled'}>
-      <span class="set-name">${st.label}${valid ? ' +' + pts + ' pts' : ''}</span>
+      <span class="set-name">${st.label}${valid ? ' +' + pts + 'pts' : ''}</span>
       <span class="set-desc">${st.desc}</span>
     </button>`;
   }).join('');
@@ -963,43 +1299,43 @@ function renderScoring() {
     const label = SET_TYPES.find(st => st.key === s.type)?.label || s.type;
     const cards = s.cardIds.map(id => cardHTML(id, 'item', 'assigned')).join('');
     return `<div class="set-bucket valid">
-      <h4>${label} — <strong>${s.points} pts</strong>
-        <button onclick="handleRemoveSet(${i})" style="font-size:10px;padding:2px 8px;margin-left:10px;" class="btn-danger">Remove</button>
+      <h4>${label} — <span class="gold">+${s.points} pts</span>
+        <button onclick="handleRemoveSet(${i})" style="font-size:6px;padding:3px 8px;margin-left:10px;" class="btn-danger">REMOVE</button>
       </h4>
       <div class="card-row">${cards}</div>
     </div>`;
   }).join('');
 
   const setSection = eligible.length > 0 ? `
-    <div class="section">
-      <h2>Assign to Set Type</h2>
+    <div class="win">
+      <h2>▸ ASSIGN TO SET</h2>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">${setButtons}</div>
     </div>` : '';
 
   const committedSection = G.scoringSets.length > 0 ? `
-    <div class="section">
-      <h2>Committed Sets</h2>
+    <div class="win">
+      <h2>▸ COMMITTED SETS</h2>
       ${committedHTML}
     </div>` : '';
 
   return `
-    <h1>⚔️ Greedy Shopkeepers</h1>
-    <div class="info-bar">
-      <strong>Final Scoring</strong>
-      <span><strong>${player.name}</strong> building sets</span>
-      <span>Running total: <strong style="color:#ffd700">${total}</strong> pts</span>
+    <div class="game-title">🏪 FINAL SCORING</div>
+
+    <div class="status-bar">
+      <span class="sb-wave">SCORING PHASE</span>
+      <span><span class="sb-label">PLAYER:</span> <span class="sb-val">${player.name}</span></span>
+      <span><span class="sb-label">Running total:</span> <span class="gold" style="font-size:11px">${total} pts</span></span>
     </div>
 
-    <div class="section">
-      <h2>🏪 ${player.name}'s Stash (${player.stash.length} cards)</h2>
-      <div style="font-size:12px;color:#888;margin-bottom:8px;">
-        All stash cards count toward base score. Click to select, then assign to a set for bonus points.
-        Dimmed cards are already assigned.
+    <div class="win">
+      <h2>▸ ${player.name.toUpperCase()}'S STASH (${player.stash.length} cards)</h2>
+      <div class="win-alt" style="font-size:7px;color:var(--text-muted);margin-bottom:12px;padding:8px 12px">
+        All stash cards count toward base score. Select cards, then assign to a set for bonus points. Dimmed cards are already assigned.
       </div>
-      ${sortButtonsHTML()}
+      ${sortRowHTML()}
       <div class="card-row">${stashHTML}</div>
       <div class="btn-row">
-        <button class="btn-ghost" onclick="handleClearScoringSel()">Clear selection</button>
+        <button class="btn-ghost" onclick="handleClearScoringSel()">Clear sel.</button>
       </div>
     </div>
 
@@ -1007,17 +1343,18 @@ function renderScoring() {
     ${committedSection}
     ${scoringReferenceHTML()}
 
-    <div class="section">
+    <div class="win">
       <div class="score-summary">
-        Base score: <strong>${baseScore}</strong>
-        <span style="color:#666">+</span>
-        Set bonuses: <strong>${setScore}</strong>
-        <span style="color:#666">=</span>
-        <span class="score-total">${total} pts</span>
+        <span>Base: <strong>${baseScore}</strong></span>
+        <span class="dim">+</span>
+        <span>Sets: <strong>${setScore}</strong></span>
+        <span class="dim">=</span>
+        <span class="big">${total}</span>
+        <span class="dim">pts</span>
       </div>
-      <div class="btn-row" style="margin-top:14px;">
-        <button class="btn-success" onclick="handleLockIn()" style="font-size:15px;padding:10px 28px;">
-          Lock in — ${total} pts ✓
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn-success" onclick="handleLockIn()" style="font-size:9px;padding:12px 24px">
+          LOCK IN — ${total} pts ✓
         </button>
       </div>
     </div>`;
@@ -1038,61 +1375,67 @@ function renderGameover() {
     <div class="score-entry ${s.total === maxScore ? 'winner' : ''}">
       <span>${s.total === maxScore ? '🏆 ' : ''}${s.name}</span>
       <div style="text-align:right">
-        <div style="font-size:18px">${s.total} pts</div>
+        <div class="score-total">${s.total}</div>
         <div class="score-breakdown">base ${s.base} + sets ${s.bonus}</div>
-        <div style="font-size:11px;color:#666;margin-top:3px">
-          ~best possible: ${s.best.total} pts &nbsp;·&nbsp; efficiency: ${s.eff}%
+        <div style="font-size:7px;color:var(--text-muted);margin-top:4px">
+          best possible ≈${s.best.total} pts &nbsp;·&nbsp; efficiency ${s.eff}%
         </div>
       </div>
     </div>`).join('');
 
   const headline = G.players.length === 1
-    ? `Final score: <strong style="color:#ffd700">${maxScore} pts</strong>`
-    : `Winner${scores.filter(s => s.total === maxScore).length > 1 ? 's' : ''}: <strong style="color:#ffd700">${winners}</strong>`;
+    ? `Final score: <span class="gold">${maxScore} pts</span>`
+    : `Winner${scores.filter(s => s.total === maxScore).length > 1 ? 's' : ''}: <span class="gold">${winners}</span>`;
 
   return `
-    <h1>⚔️ Greedy Shopkeepers</h1>
-    <div class="section">
-      <h2 style="text-align:center;font-size:22px;color:#ffd700;margin-bottom:18px;">🏆 Final Scores</h2>
+    <div class="game-title">🏆 GAME OVER</div>
+    <div class="win">
+      <h2 style="text-align:center;font-size:12px;color:var(--gold);margin-bottom:18px">FINAL SCORES</h2>
       ${rows}
-      <div style="text-align:center;margin-top:20px;font-size:18px">${headline}</div>
-      <div style="text-align:center;margin-top:8px;font-size:11px;color:#555">~best possible is an approximate upper bound (greedy heuristic)</div>
+      <div style="text-align:center;margin-top:20px;font-size:10px">${headline}</div>
+      <div style="text-align:center;margin-top:8px;font-size:7px;color:var(--text-muted)">
+        best possible is an approximate upper bound (greedy heuristic)
+      </div>
     </div>
-    <div style="text-align:center;margin-top:16px;">
-      <button class="btn-primary" onclick="showSetup()" style="font-size:16px;padding:12px 36px;">Play Again</button>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn-primary" onclick="showSetup()" style="font-size:10px;padding:14px 36px">PLAY AGAIN</button>
     </div>`;
 }
 
 function renderInterstitial() {
-  let title, subtitle, btnLabel, btnAction;
+  let phase, title, sub, btnLabel, btnAction;
 
   if (G.interstitialNext === 'wave-turn') {
     const next = G.players[(G.currentPlayerIndex + 1) % G.players.length];
-    title    = `Pass to ${next.name}`;
-    subtitle = `Wave ${G.waveIndex + 1} continues`;
-    btnLabel = `I'm ${next.name} — start my turn`;
+    phase    = `WAVE ${G.waveIndex + 1}`;
+    title    = `PASS TO ${next.name.toUpperCase()}`;
+    sub      = 'Hand this device to the next player.';
+    btnLabel = `I'M ${next.name.toUpperCase()} — START TURN`;
     btnAction = 'handleNextTurn()';
 
   } else if (G.interstitialNext === 'stash-next') {
     const next = G.players[G.stashPlayerIndex];
-    title    = `Pass to ${next.name}`;
-    subtitle = `Wave ${G.waveIndex + 1} Stash Phase`;
-    btnLabel = `I'm ${next.name} — start stashing`;
+    phase    = `STASH PHASE`;
+    title    = `PASS TO ${next.name.toUpperCase()}`;
+    sub      = 'Hand this device to the next player.';
+    btnLabel = `I'M ${next.name.toUpperCase()} — START STASHING`;
     btnAction = 'handleNextStash()';
 
   } else if (G.interstitialNext === 'scoring-next') {
     const next = G.players[G.scoringPlayerIndex];
-    title    = `Pass to ${next.name}`;
-    subtitle = 'Final Scoring Phase';
-    btnLabel = `I'm ${next.name} — build my sets`;
+    phase    = `FINAL SCORING`;
+    title    = `PASS TO ${next.name.toUpperCase()}`;
+    sub      = 'Hand this device to the next player.';
+    btnLabel = `I'M ${next.name.toUpperCase()} — BUILD MY SETS`;
     btnAction = 'handleNextScoring()';
   }
 
   return `
     <div class="interstitial">
+      <div class="inter-phase">${phase}</div>
       <h2>${title}</h2>
-      <p>${subtitle}</p>
-      <button class="btn-primary" onclick="${btnAction}" style="font-size:16px;padding:12px 32px;">${btnLabel}</button>
+      <p class="inter-sub">${sub}</p>
+      <button class="btn-primary" onclick="${btnAction}" style="font-size:8px;padding:14px 24px">${btnLabel}</button>
     </div>`;
 }
 
@@ -1100,20 +1443,24 @@ function renderInterstitial() {
 // SETUP SCREEN
 // ============================================================
 function showSetup() {
-  document.body.classList.remove('theme-shop');
+  document.body.dataset.theme = 'dungeon';
   document.getElementById('app').innerHTML = `
     <div class="setup-screen">
-      <h1>⚔️ Greedy Shopkeepers</h1>
-      <p>A board game prototype</p>
-      <p style="margin-top:4px;font-size:12px">Defeat monsters · Loot items · Build the best shop</p>
-      <h3 style="margin-top:36px;font-size:16px;color:#ccc">How many players?</h3>
-      <div class="player-count-row">
-        <button class="btn-primary" onclick="initGame(1)">1</button>
-        <button class="btn-primary" onclick="initGame(2)">2</button>
-        <button class="btn-primary" onclick="initGame(3)">3</button>
-        <button class="btn-primary" onclick="initGame(4)">4</button>
+      <div class="setup-banner">
+        <div class="setup-banner-text">
+          <div class="banner-title">GREEDY SHOPKEEPERS</div>
+          <div class="banner-sub">Defeat monsters · Loot items · Build the best shop</div>
+        </div>
       </div>
-      <p style="font-size:12px;color:#555">Start with solo (1 player) to learn the rules</p>
+
+      <p class="setup-prompt">How many players?</p>
+      <div class="player-count-row">
+        <button class="btn-primary player-count-btn" onclick="initGame(1)">1</button>
+        <button class="btn-primary player-count-btn" onclick="initGame(2)">2</button>
+        <button class="btn-primary player-count-btn" onclick="initGame(3)">3</button>
+        <button class="btn-primary player-count-btn" onclick="initGame(4)">4</button>
+      </div>
+      <p style="font-size:7px;color:var(--text-muted)">Start with 1 player to learn the rules</p>
     </div>`;
 }
 
