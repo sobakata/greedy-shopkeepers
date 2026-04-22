@@ -5,13 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Greedy Shopkeepers</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+
+    /* ── Theme variables — Dungeon (default) ── */
+    :root {
+      --bg:           #080812;
+      --surface:      #11112a;
+      --surface-alt:  #0c0820;
+      --surface-deep: #06060f;
+      --border:       #252442;
+      --text:         #c8c4b4;
+      --text-muted:   #5a566a;
+      --text-strong:  #ddd8c8;
+      --accent:       #e07a2a;
+      --gold:         #c89010;
+      --ok:           #5a9a5a;
+      --warn:         #c04040;
+      --pile-dead-bd: #252545;
+      --pile-dead-tx: #38386a;
+      --ghost-bd:     #3a3858;
+      --ghost-tx:     #a0a0c0;
+
+      --card-common-bg:   #0c1e0c;
+      --card-common-bd:   #3a7a3a;
+      --card-common-tx:   #a8c8a8;
+      --card-uncommon-bg: #081422;
+      --card-uncommon-bd: #2a6a9a;
+      --card-uncommon-tx: #9ab8d4;
+      --card-rare-bg:     #14082a;
+      --card-rare-bd:     #7a2a9a;
+      --card-rare-tx:     #c8a8e8;
+      --card-epic-bg:     #1c0c06;
+      --card-epic-bd:     #b05800;
+      --card-epic-tx:     #d8b080;
+    }
+
+    /* ── Theme variables — Shop (bright) ── */
+    body.theme-shop {
+      --bg:           #120a04;
+      --surface:      #1e1208;
+      --surface-alt:  #261808;
+      --surface-deep: #160e06;
+      --border:       #3a2810;
+      --text:         #ead8a8;
+      --text-muted:   #887050;
+      --text-strong:  #f0e4c0;
+      --accent:       #f0c040;
+      --gold:         #f0c040;
+      --ok:           #70c050;
+      --warn:         #e85030;
+      --pile-dead-bd: #3a2810;
+      --pile-dead-tx: #553a20;
+      --ghost-bd:     #5a4020;
+      --ghost-tx:     #c8a860;
+
+      --card-common-bg:   #183010;
+      --card-common-bd:   #58bb38;
+      --card-common-tx:   #c0e898;
+      --card-uncommon-bg: #0c1c3a;
+      --card-uncommon-bd: #4898e8;
+      --card-uncommon-tx: #a8cef8;
+      --card-rare-bg:     #200e3a;
+      --card-rare-bd:     #c050e8;
+      --card-rare-tx:     #e8b8ff;
+      --card-epic-bg:     #2c1406;
+      --card-epic-bd:     #f89820;
+      --card-epic-tx:     #ffe0a0;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #1a1a2e; color: #e0e0e0; font-family: system-ui, sans-serif; min-height: 100vh; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: system-ui, sans-serif; min-height: 100vh;
+      transition: background 0.4s, color 0.4s;
+    }
     #app { max-width: 960px; margin: 0 auto; padding: 16px; }
 
-    h1 { text-align: center; margin-bottom: 20px; font-size: 28px; color: #ffd700; letter-spacing: 1px; }
-    h2 { margin-bottom: 10px; font-size: 18px; }
-    h3 { margin-bottom: 6px; font-size: 14px; color: #aaa; font-weight: normal; }
+    h1 {
+      text-align: center; margin-bottom: 20px; font-size: 28px;
+      color: var(--accent); letter-spacing: 2px;
+      font-family: 'Cinzel', Georgia, serif;
+      text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    h2 { margin-bottom: 10px; font-size: 18px; color: var(--text-strong); }
+    h3 { margin-bottom: 6px; font-size: 14px; color: var(--text-muted); font-weight: normal; }
 
     button {
       cursor: pointer; border: none; border-radius: 6px;
@@ -24,15 +101,17 @@
     .btn-warning   { background: #f57c00; color: #fff; }
     .btn-danger    { background: #c62828; color: #fff; }
     .btn-secondary { background: #424242; color: #fff; }
-    .btn-ghost     { background: transparent; border: 1px solid #555; color: #ccc; }
+    .btn-ghost     { background: transparent; border: 1px solid var(--ghost-bd); color: var(--ghost-tx); }
 
     .section {
-      background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 14px;
     }
     .card-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
     .btn-row  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
     .info-bar {
-      background: #0f3460; border-radius: 8px; padding: 10px 16px;
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 16px;
       margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
     }
 
@@ -41,71 +120,73 @@
       display: inline-flex; flex-direction: column; align-items: center;
       justify-content: space-between; width: 74px; height: 104px; border-radius: 8px;
       padding: 5px 4px 4px; border: 3px solid #444; cursor: pointer;
-      user-select: none; position: relative; flex-shrink: 0; transition: transform 0.1s;
+      user-select: none; position: relative; flex-shrink: 0;
+      transition: transform 0.12s, box-shadow 0.12s;
     }
-    .card:hover { transform: translateY(-2px); }
+    .card:hover { transform: translateY(-3px); }
     .card.selected { outline: 3px solid #fff; outline-offset: 3px; }
     .card.assigned { opacity: 0.38; pointer-events: none; transform: none; }
     .card .card-level { font-size: 19px; font-weight: 900; line-height: 1; align-self: flex-start; }
     .card .card-emoji { font-size: 30px; }
     .card .card-type  { font-size: 9px; text-align: center; line-height: 1.3; opacity: 0.85; }
 
-    .rarity-common   { background: #1b3a1b; border-color: #4caf50; color: #c8f0c8; }
-    .rarity-uncommon { background: #17283e; border-color: #42a5f5; color: #c0dcff; }
-    .rarity-rare     { background: #271838; border-color: #ab47bc; color: #e8c8ff; }
-    .rarity-epic     { background: #3c2210; border-color: #ff9800; color: #ffe0b2; }
+    .rarity-common   { background: var(--card-common-bg);   border-color: var(--card-common-bd);   color: var(--card-common-tx);   box-shadow: 0 0 6px color-mix(in srgb, var(--card-common-bd) 35%, transparent); }
+    .rarity-uncommon { background: var(--card-uncommon-bg); border-color: var(--card-uncommon-bd); color: var(--card-uncommon-tx); box-shadow: 0 0 6px color-mix(in srgb, var(--card-uncommon-bd) 35%, transparent); }
+    .rarity-rare     { background: var(--card-rare-bg);     border-color: var(--card-rare-bd);     color: var(--card-rare-tx);     box-shadow: 0 0 6px color-mix(in srgb, var(--card-rare-bd) 35%, transparent); }
+    .rarity-epic     { background: var(--card-epic-bg);     border-color: var(--card-epic-bd);     color: var(--card-epic-tx);     box-shadow: 0 0 6px color-mix(in srgb, var(--card-epic-bd) 35%, transparent); }
 
     /* ── Wave arena ── */
     .wave-arena { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
     .pile { display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .pile-dead {
-      width: 74px; height: 104px; border: 2px dashed #2a2a4a; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; color: #3a3a5a; font-size: 22px;
+      width: 74px; height: 104px; border: 2px dashed var(--pile-dead-bd); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; color: var(--pile-dead-tx); font-size: 22px;
     }
-    .pile-count { font-size: 11px; color: #666; }
+    .pile-count { font-size: 11px; color: var(--text-muted); }
     .pile-btn   { font-size: 11px; padding: 4px 8px; margin-top: 2px; }
 
     /* ── Setup ── */
     .setup-screen { text-align: center; padding: 48px 20px; }
-    .setup-screen p { color: #888; margin-bottom: 8px; }
+    .setup-screen p { color: var(--text-muted); margin-bottom: 8px; }
     .player-count-row { display: flex; justify-content: center; gap: 14px; margin: 28px 0 20px; }
     .player-count-row button { width: 64px; height: 64px; font-size: 28px; border-radius: 14px; }
 
     /* ── Interstitial ── */
     .interstitial { text-align: center; padding: 72px 20px; }
-    .interstitial h2 { font-size: 30px; margin-bottom: 12px; }
-    .interstitial p  { color: #888; margin-bottom: 36px; font-size: 16px; }
+    .interstitial h2 { font-size: 30px; margin-bottom: 12px; color: var(--text-strong); }
+    .interstitial p  { color: var(--text-muted); margin-bottom: 36px; font-size: 16px; }
 
     /* ── Stash ── */
     .stash-hint {
-      background: #0a1e36; border-radius: 8px; padding: 10px 14px;
-      margin-bottom: 10px; font-size: 13px; line-height: 1.6; color: #aaa;
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      margin-bottom: 10px; font-size: 13px; line-height: 1.6; color: var(--text-muted);
     }
-    .stash-hint strong { color: #e0e0e0; }
+    .stash-hint strong { color: var(--text-strong); }
 
     /* ── Scoring ── */
     .set-bucket {
-      background: #101828; border: 2px dashed #2a3a52; border-radius: 8px;
+      background: var(--surface-deep); border: 2px dashed var(--border); border-radius: 8px;
       padding: 10px 12px; margin-bottom: 8px;
     }
     .set-bucket.valid { border-color: #388e3c; }
-    .set-bucket h4 { font-size: 13px; color: #aaa; margin-bottom: 6px; }
+    .set-bucket h4 { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
 
     .set-type-btn {
       text-align: left; padding: 9px 13px; font-size: 12px;
       font-weight: normal; line-height: 1.4;
     }
     .set-type-btn .set-name  { font-weight: bold; font-size: 13px; display: block; }
-    .set-type-btn .set-desc  { color: #aaa; }
+    .set-type-btn .set-desc  { color: var(--text-muted); }
     .set-type-btn:not(:disabled) { border: 1px solid #388e3c; background: #1a2e1a; color: #c8f0c8; }
 
     /* ── Scoreboard ── */
     .score-entry {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 8px; border-bottom: 1px solid #1e2e48; font-size: 18px;
+      padding: 12px 8px; border-bottom: 1px solid var(--border); font-size: 18px;
     }
-    .score-entry.winner { color: #ffd700; font-weight: bold; font-size: 20px; }
-    .score-breakdown { font-size: 12px; color: #888; }
+    .score-entry.winner { color: var(--gold); font-weight: bold; font-size: 20px; }
+    .score-breakdown { font-size: 12px; color: var(--text-muted); }
 
     /* ── Tags ── */
     .tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: bold; }
@@ -115,24 +196,24 @@
     .tag-epic     { background: #ff9800; color: #000; }
 
     .combat-status { margin-top: 8px; font-size: 13px; }
-    .ok   { color: #66bb6a; }
-    .warn { color: #ef5350; }
+    .ok   { color: var(--ok); }
+    .warn { color: var(--warn); }
 
     .score-summary {
       font-size: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline;
     }
-    .score-total { font-size: 26px; font-weight: bold; color: #ffd700; }
+    .score-total { font-size: 26px; font-weight: bold; color: var(--gold); }
 
     .players-overview {
       display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;
     }
     .player-pill {
-      background: #0a0a1e; border-radius: 8px; padding: 8px 12px;
-      border: 1px solid #1e2e48; min-width: 110px;
+      background: var(--surface-deep); border-radius: 8px; padding: 8px 12px;
+      border: 1px solid var(--border); min-width: 110px;
     }
-    .player-pill.active { border-color: #ffd700; }
+    .player-pill.active { border-color: var(--gold); }
     .player-pill .pill-name { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
-    .player-pill .pill-stats { font-size: 11px; color: #777; }
+    .player-pill .pill-stats { font-size: 11px; color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -669,6 +750,11 @@ function scoringReferenceHTML() {
 // RENDER FUNCTIONS
 // ============================================================
 function render() {
+  const shopPhases = new Set(['stash', 'scoring', 'gameover']);
+  const isShop = shopPhases.has(G.phase) ||
+    (G.phase === 'interstitial' && G.interstitialNext !== 'wave-turn');
+  document.body.classList.toggle('theme-shop', isShop);
+
   const app = document.getElementById('app');
   switch (G.phase) {
     case 'wave':         app.innerHTML = renderWave();         break;
@@ -1014,6 +1100,7 @@ function renderInterstitial() {
 // SETUP SCREEN
 // ============================================================
 function showSetup() {
+  document.body.classList.remove('theme-shop');
   document.getElementById('app').innerHTML = `
     <div class="setup-screen">
       <h1>⚔️ Greedy Shopkeepers</h1>

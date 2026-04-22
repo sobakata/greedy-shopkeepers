@@ -285,3 +285,10 @@ The following are planned for future design iterations and should **not** be bui
 - **Card counts:** The 140-card deck and its distribution are based on intuition and need playtesting.
 - **Wave patterns:** The 3-wave pattern is a starting point; total card count should be validated so the draw pile never empties.
 - **Player abilities:** Future feature — each player picks a character with a unique ability before the game starts.
+
+---
+
+## Decision Log
+
+| Date | Change | Rationale |
+|------|--------|-----------|
